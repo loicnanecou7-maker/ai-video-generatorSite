@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Live War - Édition Ultime</title>
+    <title>TikTok Live War - Circuit des Nations</title>
     <style>
         * {
             box-sizing: border-box;
@@ -11,7 +11,7 @@
             padding: 0;
         }
         body {
-            background: #060913;
+            background: radial-gradient(circle at center, #0f172a 0%, #030712 100%);
             color: #ffffff;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
             overflow: hidden;
@@ -21,9 +21,9 @@
             user-select: none;
         }
 
-        /* En-tête Ticker des Cadeaux TikTok */
+        /* Ticker cadeaux */
         .ticker-container {
-            background: linear-gradient(90deg, #0f172a, #4c1d95, #0f172a);
+            background: linear-gradient(90deg, #0f172a, #7c3aed, #0f172a);
             border-bottom: 1px solid #8b5cf6;
             overflow: hidden;
             white-space: nowrap;
@@ -31,6 +31,7 @@
             font-size: 11px;
             font-weight: 600;
             flex-shrink: 0;
+            box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3);
         }
         .ticker-text {
             display: inline-block;
@@ -49,13 +50,14 @@
             100% { transform: translate3d(-50%, 0, 0); }
         }
 
-        /* Barre supérieure d'état et configuration */
+        /* Barre du haut */
         .top-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: #0b132b;
-            padding: 10px 20px;
+            background: rgba(11, 19, 43, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 8px 20px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             font-size: 12px;
             z-index: 50;
@@ -85,62 +87,111 @@
             100% { transform: scale(0.95); opacity: 0.8; }
         }
 
-        /* Arène principale */
-        .arena {
+        /* Conteneur principal de la piste circulaire */
+        .arena-container {
             position: relative;
             flex: 1;
-            width: 100%;
-            background: radial-gradient(circle at center, #0f172a 0%, #030712 100%);
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 15px;
-            padding: 20px;
+            display: flex;
             align-items: center;
-            justify-items: center;
+            justify-content: center;
             overflow: hidden;
         }
 
-        /* Bulles des pays proportionnelles */
-        .country-bubble {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(12px);
-            border: 2px solid rgba(255, 255, 255, 0.15);
+        /* Circuit Circulaire stylisé */
+        .circuit-map {
+            position: relative;
+            width: 650px;
+            height: 650px;
             border-radius: 50%;
+            background: radial-gradient(circle, #1e293b 0%, #0f172a 70%, #020617 100%);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), inset 0 0 40px rgba(124, 58, 237, 0.2);
+            border: 4px solid rgba(139, 92, 246, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Piste de course (anneau central) */
+        .race-track {
+            position: absolute;
+            width: 480px;
+            height: 480px;
+            border-radius: 50%;
+            border: 65px dashed rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+        }
+
+        /* Centre de la map avec décors et trophée */
+        .map-center {
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+            border: 2px solid rgba(255, 255, 255, 0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            cursor: pointer;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 2px 6px rgba(255, 255, 255, 0.1);
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            position: relative;
-            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 5;
         }
-        .country-bubble:hover {
-            border-color: #f43f5e;
-            box-shadow: 0 0 25px rgba(244, 63, 94, 0.5);
-            z-index: 30;
+        .map-center h2 {
+            font-size: 15px;
+            color: #c084fc;
+            margin-bottom: 4px;
         }
-        .country-bubble .flag-name {
+        .map-center p {
             font-size: 11px;
-            font-weight: 700;
-            color: #f8fafc;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            margin-bottom: 2px;
-            white-space: nowrap;
-        }
-        .country-bubble .pts {
-            font-size: 10px;
             color: #94a3b8;
-            font-weight: 500;
+            padding: 0 20px;
+        }
+
+        /* Décors pays */
+        .landmark {
+            position: absolute;
+            font-size: 20px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+            z-index: 2;
+            transition: transform 0.3s;
+        }
+        .landmark:hover {
+            transform: scale(1.2);
+        }
+
+        /* Véhicules sur la piste */
+        .vehicle {
+            position: absolute;
+            width: 42px;
+            height: 42px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+            z-index: 20;
+            transition: transform 0.1s linear;
+        }
+        .vehicle .car-flag {
+            font-size: 18px;
+        }
+        .vehicle .car-score {
+            position: absolute;
+            bottom: -16px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 1px 5px;
+            border-radius: 10px;
+            font-size: 9px;
+            color: #f8fafc;
             white-space: nowrap;
         }
 
-        /* Panneau de contrôle */
+        /* Panneau de configuration */
         .control-panel {
             position: absolute;
             top: 60px;
@@ -150,7 +201,7 @@
             backdrop-filter: blur(10px);
             border-radius: 12px;
             padding: 14px;
-            width: 280px;
+            width: 270px;
             z-index: 100;
             box-shadow: 0 10px 30px rgba(0,0,0,0.7);
         }
@@ -184,11 +235,9 @@
             cursor: pointer;
             transition: opacity 0.2s;
         }
-        .btn-sim:hover {
-            opacity: 0.9;
-        }
+        .btn-sim:hover { opacity: 0.9; }
 
-        /* Journal des événements */
+        /* Flux d'événements */
         .event-feed {
             position: absolute;
             bottom: 15px;
@@ -215,56 +264,69 @@
 </head>
 <body>
 
-    <!-- Bandeau des prix des cadeaux -->
+    <!-- Ticker prix des cadeaux -->
     <div class="ticker-container">
         <div class="ticker-text">
             <span>🌹 Rose (1💎) | 🫶 Finger Heart (5💎) | 🧢 Cap (99💎) | 🧴 Perfume (200💎) | 💸 Money Gun (500💎) | 🐚 Concha (1000💎) | 🦅 Falcon (10999💎) | 🏰 Castle (20000💎) | 🦁 Lion (29999💎) | 🌌 Universe (34999💎)</span>
-            <span class="highlight">🚀 PRÊT POUR GITHUB & VERCEL | SYSTÈME DE BATAILLE ACTIF</span>
+            <span class="highlight">🏁 CIRCUIT DES NATIONS EN LIGNE | CHAQUE CADEAU FAIT ACCÉLÉRER LE VÉHICULE</span>
         </div>
     </div>
 
     <!-- Barre supérieure -->
     <div class="top-bar">
         <div style="display: flex; align-items: center; gap: 12px;">
-            <b>TikTok Live War - World Edition</b>
+            <b>TikTok Live War - Circuit GP</b>
             <div class="status-pill">
                 <div class="status-dot"></div>
                 <span>Prêt à connecter (@MonLiveTikTok)</span>
             </div>
         </div>
-        <span style="color: #94a3b8; font-size: 11px;">1 Diamant = 1 Point</span>
+        <span style="color: #94a3b8; font-size: 11px;">1 Diamant = Avance sur la piste</span>
     </div>
 
-    <!-- Panneau de configuration -->
+    <!-- Panneau de contrôle -->
     <div class="control-panel">
-        <h3><span>Connexion TikTok Live</span> ⚙️</h3>
+        <h3><span>Connexion Live TikTok</span> ⚙️</h3>
         <input type="text" id="tiktokUser" placeholder="@identifiant_tiktok" value="@MonLiveTikTok">
         <button class="btn-sim" onclick="connectTikTok()">Connecter le Live</button>
         <div style="margin-top: 8px; font-size: 10px; color: #64748b; line-height: 1.3;">
-            Note : Pour connecter un vrai live, ce site hébergé sur Vercel se liera via WebSocket Node.js (`tiktok-live-connector`).
+            Prêt pour GitHub & Vercel. Clique sur un véhicule pour simuler un don !
         </div>
     </div>
 
-    <!-- Arène -->
-    <div class="arena" id="arena">
+    <!-- Conteneur de la map circulaire -->
+    <div class="arena-container">
+        <div class="circuit-map" id="circuitMap">
+            <!-- Piste -->
+            <div class="race-track"></div>
+
+            <!-- Centre de la map décoratif -->
+            <div class="map-center">
+                <h2>🏆 GRAND PRIX MONDIAL</h2>
+                <p>Envoyez des cadeaux pour propulser votre pays en tête du circuit !</p>
+            </div>
+
+            <!-- Monuments / Décors positionnés autour du circuit -->
+            <div class="landmark" style="top: 35px; left: 310px;" title="Tour Eiffel">🗼</div>
+            <div class="landmark" style="top: 100px; right: 120px;" title="Statue de la Liberté">🗽</div>
+            <div class="landmark" style="bottom: 100px; right: 100px;" title="Christ Rédempteur">⛰️</div>
+            <div class="landmark" style="bottom: 40px; left: 315px;" title="Mont Fuji">🗻</div>
+            <div class="landmark" style="top: 180px; left: 80px;" title="Big Ben">🕰️</div>
+            <div class="landmark" style="bottom: 180px; left: 80px;" title="Colisée">🏛️</div>
+        </div>
+        
         <div class="event-feed" id="eventFeed"></div>
     </div>
 
     <script>
-        const countries = {
-            france: { name: "France", flag: "🇫🇷", score: 250, color: "#a78bfa" },
-            usa: { name: "USA", flag: "🇺🇸", score: 250, color: "#38bdf8" },
-            brazil: { name: "Brésil", flag: "🇧🇷", score: 250, color: "#4ade80" },
-            japan: { name: "Japon", flag: "🇯🇵", score: 250, color: "#34d399" },
-            uk: { name: "UK", flag: "🇬🇧", score: 250, color: "#60a5fa" },
-            germany: { name: "Allemagne", flag: "🇩🇪", score: 250, color: "#fbbf24" },
-            mexico: { name: "Mexique", flag: "🇲🇽", score: 250, color: "#f43f5e" },
-            canada: { name: "Canada", flag: "🇨🇦", score: 250, color: "#f87171" },
-            italy: { name: "Italie", flag: "🇮🇹", score: 250, color: "#fb923c" },
-            spain: { name: "Espagne", flag: "🇪🇸", score: 250, color: "#c084fc" },
-            russia: { name: "Russie", flag: "🇷🇺", score: 250, color: "#e879f9" },
-            india: { name: "Inde", flag: "🇮🇳", score: 250, color: "#22d3ee" }
-        };
+        const countries = [
+            { id: "france", name: "France", flag: "🇫🇷", color: "#a78bfa", angle: 0, score: 100 },
+            { id: "usa", name: "USA", flag: "🇺🇸", color: "#38bdf8", angle: 60, score: 100 },
+            { id: "brazil", name: "Brésil", flag: "🇧🇷", color: "#4ade80", angle: 120, score: 100 },
+            { id: "japan", name: "Japon", flag: "🇯🇵", color: "#34d399", angle: 180, score: 100 },
+            { id: "uk", name: "UK", flag: "🇬🇧", color: "#60a5fa", angle: 240, score: 100 },
+            { id: "italy", name: "Italie", flag: "🇮🇹", color: "#fb923c", angle: 300, score: 100 }
+        ];
 
         const gifts = [
             { name: "Rose", icon: "🌹", value: 1 },
@@ -273,84 +335,87 @@
             { name: "Perfume", icon: "🧴", value: 200 },
             { name: "Money Gun", icon: "💸", value: 500 },
             { name: "Concha", icon: "🐚", value: 1000 },
-            { name: "Falcon", icon: "🦅", value: 10999 },
-            { name: "Castle", icon: "🏰", value: 20000 },
-            { name: "Lion", icon: "🦁", value: 29999 },
-            { name: "Universe", icon: "🌌", value: 34999 }
+            { name: "Lion", icon: "🦁", value: 5000 }
         ];
 
-        const usernames = ["Jean", "Mike", "Alex", "Lucas", "Sophie", "Emma", "David", "Carlos", "Priya", "Hiroshi", "Marco"];
-        const arena = document.getElementById("arena");
+        const usernames = ["Jean", "Mike", "Alex", "Lucas", "Sophie", "Emma", "David", "Carlos", "Priya", "Hiroshi"];
+        const circuitMap = document.getElementById("circuitMap");
+        const vehicleElements = {};
 
-        function initBubbles() {
-            for (let key in countries) {
-                let c = countries[key];
-                let bubble = document.createElement("div");
-                bubble.className = "country-bubble";
-                bubble.id = `bubble-${key}`;
-                bubble.style.borderColor = c.color;
-                
-                bubble.innerHTML = `
-                    <div class="flag-name">${c.flag} ${c.name}</div>
-                    <div class="pts" id="pts-${key}">${c.score.toLocaleString()} pts</div>
+        function initVehicles() {
+            countries.forEach(c => {
+                let v = document.createElement("div");
+                v.className = "vehicle";
+                v.style.borderColor = c.color;
+                v.innerHTML = `
+                    <div class="car-flag">${c.flag}</div>
+                    <div class="car-score" id="score-${c.id}">${c.score}pts</div>
                 `;
 
-                bubble.addEventListener("click", () => {
+                v.addEventListener("click", () => {
                     let randomGift = gifts[Math.floor(Math.random() * gifts.length)];
                     let randomUser = usernames[Math.floor(Math.random() * usernames.length)];
-                    triggerGift(randomUser, key, randomGift);
+                    triggerGift(randomUser, c.id, randomGift);
                 });
 
-                arena.appendChild(bubble);
-            }
+                circuitMap.appendChild(v);
+                vehicleElements[c.id] = v;
+            });
+            updatePositions();
         }
 
-        function updateUI() {
-            for (let key in countries) {
-                let c = countries[key];
-                let ptsEl = document.getElementById(`pts-${key}`);
-                if (ptsEl) ptsEl.innerText = c.score.toLocaleString() + " pts";
+        function updatePositions() {
+            const radius = 215; 
+            const centerX = 325; 
+            const centerY = 325;
 
-                let bubble = document.getElementById(`bubble-${key}`);
-                if (bubble) {
-                    let baseSize = 85; 
-                    let size = baseSize + Math.sqrt(c.score) * 1.6;
-                    if (size > 175) size = 175;
+            countries.forEach(c => {
+                let rad = (c.angle * Math.PI) / 180;
+                let x = centerX + radius * Math.cos(rad) - 21;
+                let y = centerY + radius * Math.sin(rad) - 21;
 
-                    bubble.style.width = size + "px";
-                    bubble.style.height = size + "px";
+                let el = vehicleElements[c.id];
+                if (el) {
+                    el.style.left = x + "px";
+                    el.style.top = y + "px";
                 }
-            }
+
+                let scoreEl = document.getElementById(`score-${c.id}`);
+                if (scoreEl) {
+                    scoreEl.innerText = c.score.toLocaleString() + " pts";
+                }
+            });
         }
 
-        function triggerGift(username, countryKey, gift) {
-            let country = countries[countryKey];
+        function triggerGift(username, countryId, gift) {
+            let country = countries.find(c => c.id === countryId);
+            if (!country) return;
+
             country.score += gift.value;
-            updateUI();
+            country.angle = (country.angle + gift.value * 1.5) % 360;
+            updatePositions();
 
             let feed = document.getElementById("eventFeed");
             let feedItem = document.createElement("div");
             feedItem.className = "feed-item";
-            feedItem.innerHTML = `${country.flag} <b>${username}</b> a envoyé ${gift.icon} <b>${gift.name}</b> (${gift.value}💎) à ${country.name} !`;
+            feedItem.innerHTML = `${country.flag} <b>${username}</b> a envoyé ${gift.icon} <b>${gift.name}</b> (+${gift.value}pts) à ${country.name} !`;
             feed.prepend(feedItem);
             if (feed.children.length > 5) feed.lastChild.remove();
         }
 
         function connectTikTok() {
             let usernameInput = document.getElementById("tiktokUser").value;
-            alert("Configuration enregistrée pour " + usernameInput + " ! Vous pouvez maintenant pousser le code sur GitHub et le lier à Vercel.");
+            alert("Connexion configurée pour le live de " + usernameInput + ". Prêt pour GitHub & Vercel !");
         }
 
         setInterval(() => {
-            let keys = Object.keys(countries);
-            let randomCountry = keys[Math.floor(Math.random() * keys.length)];
+            let randomCountry = countries[Math.floor(Math.random() * countries.length)];
             let randomUser = usernames[Math.floor(Math.random() * usernames.length)];
             let randomGift = gifts[Math.floor(Math.random() * gifts.length)];
-            triggerGift(randomUser, randomCountry, randomGift);
-        }, 2000);
+            triggerGift(randomUser, randomCountry.id, randomGift);
+        }, 1800);
 
-        initBubbles();
-        updateUI();
+        initVehicles();
     </script>
 </body>
 </html>
