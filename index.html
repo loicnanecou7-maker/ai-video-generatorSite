@@ -14,7 +14,7 @@
             background-color: #0b0f19;
             color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow-x: hidden;
+            overflow: hidden;
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -27,18 +27,18 @@
             border-bottom: 2px solid #a855f7;
             overflow: hidden;
             white-space: nowrap;
-            padding: 8px 0;
-            font-size: 13px;
+            padding: 6px 0;
+            font-size: 11px;
             font-weight: 600;
-            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+            flex-shrink: 0;
         }
         .ticker-text {
             display: inline-block;
-            animation: ticker 30s linear infinite;
+            animation: ticker 25s linear infinite;
             color: #f3e8ff;
         }
         .ticker-text span {
-            margin: 0 25px;
+            margin: 0 20px;
         }
         .ticker-text .highlight {
             color: #f43f5e;
@@ -52,25 +52,25 @@
         /* Scoreboard Bar */
         .scoreboard {
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
-            gap: 15px;
-            background: rgba(15, 23, 42, 0.85);
-            padding: 10px 20px;
+            gap: 6px;
+            background: rgba(15, 23, 42, 0.9);
+            padding: 6px 10px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(5px);
+            flex-shrink: 0;
             z-index: 10;
         }
         .score-pill {
-            background: rgba(30, 41, 59, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 14px;
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-size: 11px;
             font-weight: bold;
             display: flex;
             align-items: center;
-            gap: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            gap: 4px;
         }
 
         /* Main Game Arena */
@@ -85,106 +85,108 @@
             overflow: hidden;
         }
 
-        /* World Map Background */
+        /* Clean Background Grid simulating map */
         .world-map-bg {
             position: absolute;
-            width: 90%;
-            height: 90%;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" opacity="0.15"><path fill="%23ffffff" d="M150,100 Q180,80 200,120 T250,150 Z M600,100 Q650,90 700,130 T650,200 Z M200,300 Q250,280 300,320 T250,400 Z"/></svg>');
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain;
+            width: 95%;
+            height: 95%;
+            background: radial-gradient(ellipse at center, rgba(30,41,59,0.3) 0%, rgba(3,7,18,0.8) 70%);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
             pointer-events: none;
         }
 
-        /* Country Nodes */
-        .country-node {
+        /* Country Nodes layout using a clean grid to prevent overlaps */
+        .countries-grid {
             position: absolute;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 12px 20px;
-            border-radius: 16px;
-            backdrop-filter: blur(8px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(3, auto);
+            padding: 20px;
+            gap: 15px;
             z-index: 5;
+            align-items: center;
+            justify-items: center;
+        }
+
+        .country-node {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(6px);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            padding: 10px 16px;
+            border-radius: 14px;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+            transition: transform 0.3s ease;
+            width: 130px;
         }
         .country-node h3 {
-            font-size: 16px;
-            letter-spacing: 1px;
-            margin-bottom: 4px;
-            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
         }
         .country-node .score-val {
-            font-size: 13px;
-            opacity: 0.9;
+            font-size: 11px;
+            opacity: 0.85;
         }
 
-        /* Positions & Glows */
-        #node-france { top: 32%; left: 46%; background: rgba(37, 99, 235, 0.3); border-color: #60a5fa; box-shadow: 0 0 25px rgba(96, 165, 250, 0.6); }
-        #node-usa { top: 40%; left: 15%; background: rgba(14, 165, 233, 0.3); border-color: #38bdf8; }
-        #node-brazil { top: 62%; left: 28%; background: rgba(34, 197, 94, 0.3); border-color: #4ade80; }
-        #node-russia { top: 25%; left: 75%; background: rgba(239, 68, 68, 0.3); border-color: #f87171; }
-        #node-china { top: 42%; left: 72%; background: rgba(220, 38, 38, 0.3); border-color: #fca5a5; }
+        #node-usa { border-color: #38bdf8; background: rgba(14, 165, 233, 0.25); }
+        #node-france { border-color: #60a5fa; background: rgba(37, 99, 235, 0.25); }
+        #node-brazil { border-color: #4ade80; background: rgba(34, 197, 94, 0.25); }
+        #node-russia { border-color: #f87171; background: rgba(239, 68, 68, 0.25); }
+        #node-china { border-color: #fca5a5; background: rgba(220, 38, 38, 0.25); grid-column: span 2; }
 
-        /* Floating Gifts Animation Area */
-        .floating-gifts {
+        /* Event Feed & Floating items */
+        .event-feed {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
+            bottom: 10px;
+            left: 10px;
             display: flex;
             flex-direction: column-reverse;
-            align-items: flex-end;
-            gap: 8px;
-            max-height: 350px;
+            gap: 4px;
+            max-height: 130px;
             overflow: hidden;
             pointer-events: none;
             z-index: 20;
+            font-size: 10px;
+        }
+        .feed-item {
+            background: rgba(30, 41, 59, 0.9);
+            padding: 4px 8px;
+            border-radius: 6px;
+            border-left: 2px solid #a855f7;
+            white-space: nowrap;
+        }
+
+        .floating-gifts {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: flex-end;
+            gap: 4px;
+            max-height: 150px;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 20;
+            font-size: 10px;
         }
         .floating-gift-item {
             background: rgba(15, 23, 42, 0.9);
             border: 1px solid rgba(168, 85, 247, 0.5);
-            padding: 8px 14px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 13px;
-            animation: slideInUp 0.3s ease forwards, fadeOut 0.5s ease 3.5s forwards;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            padding: 4px 8px;
+            border-radius: 6px;
+            animation: fadeInOut 3s ease forwards;
+            white-space: nowrap;
         }
-        @keyframes slideInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeOut {
-            to { opacity: 0; transform: translateY(-20px); }
-        }
-
-        /* Live Event Feed (Bottom Left) */
-        .event-feed {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            display: flex;
-            flex-direction: column-reverse;
-            gap: 6px;
-            max-height: 200px;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 20;
-        }
-        .feed-item {
-            background: rgba(30, 41, 59, 0.85);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            border-left: 3px solid #a855f7;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(10px); }
+            20% { opacity: 1; transform: translateY(0); }
+            80% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
         }
     </style>
 </head>
@@ -193,51 +195,46 @@
     <!-- Top Scrolling Banner -->
     <div class="ticker-container">
         <div class="ticker-text">
-            <span>🌹 SEND A ROSE (1 💎) - ENVOYEZ UNE ROSE (1 💎) - ENVIAR UMA ROSA (1 💎) - EINE ROSE SENDEN (1 💎)</span>
-            <span>🦁 LION (29999 💎)</span>
-            <span>🏰 CASTLE (20000 💎)</span>
-            <span>🌌 UNIVERSE (34999 💎)</span>
-            <span class="highlight">🚀 PLUS LE CADEAU EST GROS, PLUS LE PAYS GROSSIT VITE ! / THE BIGGER THE GIFT, THE FASTER THE COUNTRY GROWS! 🚀</span>
+            <span>🌹 ROSE (1 💎) - LION (29999 💎) - CASTLE (20000 💎) - UNIVERSE (34999 💎)</span>
+            <span>🇺🇸 USA | 🇫🇷 FRANCE | 🇧🇷 BRAZIL | 🇷🇺 RUSSIA | 🇨🇳 CHINA</span>
+            <span class="highlight">🚀 THE BIGGER THE GIFT, THE FASTER YOUR COUNTRY GROWS! 🚀</span>
         </div>
     </div>
 
     <!-- Live Scoreboard -->
     <div class="scoreboard" id="scoreboard">
-        <div class="score-pill" style="border-color: #60a5fa;">🇫🇷 FRANCE: <span id="score-france">15,000</span> pts</div>
-        <div class="score-pill" style="border-color: #38bdf8;">🇺🇸 USA: <span id="score-usa">12,500</span> pts</div>
-        <div class="score-pill" style="border-color: #4ade80;">🇧🇷 BRAZIL: <span id="score-brazil">8,200</span> pts</div>
-        <div class="score-pill" style="border-color: #f87171;">🇷🇺 RUSSIA: <span id="score-russia">6,400</span> pts</div>
-        <div class="score-pill" style="border-color: #fca5a5;">🇨🇳 CHINA: <span id="score-china">9,100</span> pts</div>
+        <div class="score-pill" style="border-color: #38bdf8;">🇺🇸 USA: <span id="score-usa">12,500</span></div>
+        <div class="score-pill" style="border-color: #60a5fa;">🇫🇷 FRANCE: <span id="score-france">15,000</span></div>
+        <div class="score-pill" style="border-color: #4ade80;">🇧🇷 BRAZIL: <span id="score-brazil">8,200</span></div>
+        <div class="score-pill" style="border-color: #f87171;">🇷🇺 RUSSIA: <span id="score-russia">6,400</span></div>
+        <div class="score-pill" style="border-color: #fca5a5;">🇨🇳 CHINA: <span id="score-china">9,100</span></div>
     </div>
 
-    <!-- Arena -->
+    <!-- Arena with structured grid -->
     <div class="arena">
         <div class="world-map-bg"></div>
 
-        <!-- Country Nodes -->
-        <div class="country-node" id="node-france">
-            <h3>🇫🇷 FRANCE</h3>
-            <div class="score-val" id="val-france">15,000 pts</div>
-        </div>
-
-        <div class="country-node" id="node-usa">
-            <h3>🇺🇸 USA</h3>
-            <div class="score-val" id="val-usa">12,500 pts</div>
-        </div>
-
-        <div class="country-node" id="node-brazil">
-            <h3>🇧🇷 BRAZIL</h3>
-            <div class="score-val" id="val-brazil">8,200 pts</div>
-        </div>
-
-        <div class="country-node" id="node-russia">
-            <h3>🇷🇺 RUSSIA</h3>
-            <div class="score-val" id="val-russia">6,400 pts</div>
-        </div>
-
-        <div class="country-node" id="node-china">
-            <h3>🇨🇳 CHINA</h3>
-            <div class="score-val" id="val-china">9,100 pts</div>
+        <div class="countries-grid">
+            <div class="country-node" id="node-usa">
+                <h3>🇺🇸 USA</h3>
+                <div class="score-val" id="val-usa">12,500 pts</div>
+            </div>
+            <div class="country-node" id="node-france">
+                <h3>🇫🇷 FRANCE</h3>
+                <div class="score-val" id="val-france">15,000 pts</div>
+            </div>
+            <div class="country-node" id="node-brazil">
+                <h3>🇧🇷 BRAZIL</h3>
+                <div class="score-val" id="val-brazil">8,200 pts</div>
+            </div>
+            <div class="country-node" id="node-russia">
+                <h3>🇷🇺 RUSSIA</h3>
+                <div class="score-val" id="val-russia">6,400 pts</div>
+            </div>
+            <div class="country-node" id="node-china" style="grid-column: span 2;">
+                <h3>🇨🇳 CHINA</h3>
+                <div class="score-val" id="val-china">9,100 pts</div>
+            </div>
         </div>
 
         <!-- Event Feed -->
@@ -249,8 +246,8 @@
 
     <script>
         const countries = {
-            france: { name: "FRANCE", flag: "🇫🇷", score: 15000 },
             usa: { name: "USA", flag: "🇺🇸", score: 12500 },
+            france: { name: "FRANCE", flag: "🇫🇷", score: 15000 },
             brazil: { name: "BRAZIL", flag: "🇧🇷", score: 8200 },
             russia: { name: "RUSSIA", flag: "🇷🇺", score: 6400 },
             china: { name: "CHINA", flag: "🇨🇳", score: 9100 }
@@ -273,8 +270,8 @@
                 
                 let node = document.getElementById(`node-${key}`);
                 if (node) {
-                    let computedScale = 1 + (c.score / 40000);
-                    if (computedScale > 1.8) computedScale = 1.8;
+                    let computedScale = 1 + (c.score / 80000);
+                    if (computedScale > 1.35) computedScale = 1.35;
                     node.style.transform = `scale(${computedScale})`;
                 }
             }
@@ -288,17 +285,17 @@
             let feed = document.getElementById("eventFeed");
             let feedItem = document.createElement("div");
             feedItem.className = "feed-item";
-            feedItem.innerHTML = `${country.flag} <b>${username}</b> sent a <span style="color:#f43f5e;">${gift.icon} ${gift.name}</span> to ${country.name}`;
+            feedItem.innerHTML = `${country.flag} <b>${username}</b> sent <span style="color:#f43f5e;">${gift.icon} ${gift.name}</span> to ${country.name}`;
             feed.prepend(feedItem);
-            if (feed.children.length > 5) feed.lastChild.remove();
+            if (feed.children.length > 4) feed.lastChild.remove();
 
             let floating = document.getElementById("floatingGifts");
             let floatItem = document.createElement("div");
             floatItem.className = "floating-gift-item";
-            floatItem.innerHTML = `${country.flag} <b>${username}</b> sent ${gift.icon} <b>${gift.name}</b> (+${(gift.value * gift.weight).toLocaleString()} pts)`;
+            floatItem.innerHTML = `${country.flag} ${gift.icon} <b>${gift.name}</b> (+${(gift.value * gift.weight).toLocaleString()})`;
             floating.prepend(floatItem);
-            setTimeout(() => floatItem.remove(), 4000);
-            if (floating.children.length > 6) floating.lastChild.remove();
+            setTimeout(() => floatItem.remove(), 3000);
+            if (floating.children.length > 5) floating.lastChild.remove();
         }
 
         setInterval(() => {
