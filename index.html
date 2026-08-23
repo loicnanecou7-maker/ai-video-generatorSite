@@ -43,6 +43,8 @@
     position:absolute; inset:0;
     display:block;
     cursor: grab;
+    touch-action: none;
+    -webkit-user-select:none; user-select:none;
     background:
       radial-gradient(ellipse at 30% 20%, rgba(52,211,153,0.06), transparent 55%),
       radial-gradient(ellipse at 75% 80%, rgba(182,255,92,0.04), transparent 50%),
@@ -365,19 +367,52 @@
   ::-webkit-scrollbar-track{ background:transparent; }
   ::-webkit-scrollbar-thumb{ background: var(--line-strong); border-radius:3px; }
 
+  /* ---------- MENU TOGGLE (mobile) ---------- */
+  .menu-toggle{
+    display:none;
+    width:38px; height:38px; border-radius:9px;
+    border:1px solid var(--line);
+    background: rgba(10,18,16,0.85);
+    align-items:center; justify-content:center;
+    color: var(--text-hi); font-size:16px;
+    cursor:pointer; pointer-events:auto;
+    flex-shrink:0;
+  }
+  .sidebar-scrim{
+    display:none;
+    position:absolute; inset:0; z-index:14;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(2px);
+  }
+  .sidebar-scrim.open{ display:block; }
+
   @media (max-width: 860px){
-    .sidebar{ width: 210px; padding: 78px 14px 14px; }
+    .menu-toggle{ display:flex; }
+    .brand-name{ font-size:16px; }
+    .sidebar{
+      width: min(78vw, 300px);
+      padding: 78px 18px 18px;
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(.19,1,.22,1);
+      box-shadow: 20px 0 40px rgba(0,0,0,0.4);
+    }
+    .sidebar.open{ transform: translateX(0); }
     .detail-panel{ width: 100%; }
     .region-readout{ display:none; }
+    .godmode-toggle{ left: 14px; bottom: 14px; }
+    .zoom-controls{ right:14px; bottom:14px; }
+    .minimap-scale{ right:14px; bottom: 72px; font-size:9px; }
   }
 </style>
 </head>
 <body>
 <div id="app">
   <canvas id="mapCanvas"></canvas>
+  <div class="sidebar-scrim" id="sidebarScrim"></div>
 
   <div class="topbar">
-    <div class="brand">
+    <div class="brand" style="pointer-events:auto;">
+      <div class="menu-toggle" id="menuToggle">☰</div>
       <div class="brand-mark">🌲</div>
       <div class="brand-name">CANO<em>PY</em></div>
     </div>
@@ -388,7 +423,7 @@
     </div>
   </div>
 
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div>
       <div class="stat-block-title">Ma canopée</div>
       <div class="stat-grid">
@@ -466,66 +501,961 @@ const RARITIES = {
 const RARITY_KEYS = Object.keys(RARITIES);
 const RARITY_WEIGHTS = [46, 30, 15, 7, 2]; // % approx pour commun->légendaire
 
+// Chaque région correspond à une véritable zone forestière du globe (bbox lng/lat approximative).
+// kind pilote le rendu vectoriel de l'arbre sur la carte (voir drawTree).
 const REGIONS = [
-  { key:"amazonia", name:"Amazonie",        latBase:-3,  lngBase:-62, color:"#0f2e1c",
+  { key:"amazonia", name:"Bassin Amazonien", lngMin:-78, lngMax:-48, latMin:-14, latMax:5, color:"#0f2e1c",
     species:[
-      {name:"Acajou d'Amazonie", icon:"🌳", rarity:"rare"},
-      {name:"Kapokier Géant",    icon:"🌴", rarity:"epic"},
-      {name:"Palissandre du Pará", icon:"🌲", rarity:"uncommon"},
-      {name:"Hévéa Sauvage",     icon:"🌿", rarity:"common"},
+      {name:"Acajou d'Amazonie",   kind:"broadleaf", icon:"🌳", rarity:"rare",      canopy:["#1f6b3f","#2d8a52"]},
+      {name:"Kapokier Géant",      kind:"tall",       icon:"🌴", rarity:"epic",     canopy:["#1a5c38","#268a4f"]},
+      {name:"Palissandre du Pará", kind:"broadleaf",  icon:"🌲", rarity:"uncommon", canopy:["#215c33","#2f7d47"]},
+      {name:"Hévéa Sauvage",       kind:"broadleaf",  icon:"🌿", rarity:"common",   canopy:["#2a6b3e","#3a8c54"]},
     ]},
-  { key:"africa", name:"Afrique de l'Ouest", latBase:9,   lngBase:1,   color:"#2e2410",
+  { key:"africa", name:"Afrique Tropicale", lngMin:-15, lngMax:35, latMin:-6, latMax:17, color:"#2e2410",
     species:[
-      {name:"Baobab Ancestral",  icon:"🌳", rarity:"legendary"},
-      {name:"Iroko Sacré",       icon:"🌲", rarity:"epic"},
-      {name:"Acacia du Sahel",   icon:"🌵", rarity:"common"},
-      {name:"Palmier Rônier",    icon:"🌴", rarity:"uncommon"},
+      {name:"Baobab Ancestral", kind:"baobab",    icon:"🌳", rarity:"legendary", canopy:["#5c8a3c","#79a852"], trunk:"#8a6a42"},
+      {name:"Iroko Sacré",      kind:"broadleaf", icon:"🌲", rarity:"epic",      canopy:["#245c2e","#357d42"]},
+      {name:"Acacia du Sahel",  kind:"umbrella",  icon:"🌵", rarity:"common",    canopy:["#6b8a3c","#8aa852"]},
+      {name:"Palmier Rônier",   kind:"palm",      icon:"🌴", rarity:"uncommon",  canopy:["#3d7d42","#54a058"]},
     ]},
-  { key:"asia", name:"Asie du Sud-Est",      latBase:13,  lngBase:101, color:"#132e1e",
+  { key:"asia", name:"Asie du Sud-Est", lngMin:95, lngMax:120, latMin:-8, latMax:15, color:"#132e1e",
     species:[
-      {name:"Banyan Sacré",      icon:"🌳", rarity:"epic"},
-      {name:"Teck de Birmanie",  icon:"🌲", rarity:"rare"},
-      {name:"Bambou Géant",      icon:"🎋", rarity:"common"},
-      {name:"Bois de Fer",       icon:"🌴", rarity:"uncommon"},
+      {name:"Banyan Sacré",     kind:"banyan",  icon:"🌳", rarity:"epic",     canopy:["#1f5c38","#2d8250"]},
+      {name:"Teck de Birmanie", kind:"broadleaf", icon:"🌲", rarity:"rare",   canopy:["#215c33","#317d47"]},
+      {name:"Bambou Géant",     kind:"bamboo",  icon:"🎋", rarity:"common",   canopy:["#4a8a3c","#63a852"]},
+      {name:"Bois de Fer",      kind:"broadleaf", icon:"🌴", rarity:"uncommon", canopy:["#1c4d2c","#2a6b3e"]},
     ]},
-  { key:"japan", name:"Japon",                latBase:36,  lngBase:138, color:"#2e1626",
+  { key:"japan", name:"Japon", lngMin:130, lngMax:145, latMin:30, latMax:45, color:"#2e1626",
     species:[
-      {name:"Cerisier Sakura",   icon:"🌸", rarity:"rare"},
-      {name:"Érable Momiji",     icon:"🍁", rarity:"uncommon"},
-      {name:"Pin Noir du Japon", icon:"🌲", rarity:"common"},
-      {name:"Ginkgo Millénaire", icon:"🍃", rarity:"legendary"},
+      {name:"Cerisier Sakura",   kind:"blossom", icon:"🌸", rarity:"rare",      canopy:["#f4a6c8","#ffc9e0"]},
+      {name:"Érable Momiji",     kind:"blossom", icon:"🍁", rarity:"uncommon",  canopy:["#d9542f","#f0793f"]},
+      {name:"Pin Noir du Japon", kind:"conifer", icon:"🌲", rarity:"common",    canopy:["#1e4a30","#2c6b44"]},
+      {name:"Ginkgo Millénaire", kind:"blossom", icon:"🍃", rarity:"legendary", canopy:["#e0b83c","#f2d466"]},
     ]},
-  { key:"siberia", name:"Sibérie",            latBase:60,  lngBase:100, color:"#101f2e",
+  { key:"siberia", name:"Taïga Sibérienne", lngMin:60, lngMax:150, latMin:50, latMax:68, color:"#101f2e",
     species:[
-      {name:"Mélèze de Sibérie", icon:"🌲", rarity:"common"},
-      {name:"Pin Sibérien",      icon:"🌲", rarity:"uncommon"},
-      {name:"Bouleau Blanc",     icon:"🌳", rarity:"common"},
-      {name:"Cèdre de Sibérie",  icon:"🌲", rarity:"rare"},
+      {name:"Mélèze de Sibérie", kind:"conifer", icon:"🌲", rarity:"common",   canopy:["#1c4d38","#296b4d"]},
+      {name:"Pin Sibérien",      kind:"conifer", icon:"🌲", rarity:"uncommon", canopy:["#173d2e","#235c44"]},
+      {name:"Bouleau Blanc",     kind:"birch",   icon:"🌳", rarity:"common",   canopy:["#3d6b3c","#548a52"], trunk:"#d8dcd2"},
+      {name:"Cèdre de Sibérie",  kind:"conifer", icon:"🌲", rarity:"rare",     canopy:["#164036","#215c4d"]},
     ]},
-  { key:"namerica", name:"Amérique du Nord",  latBase:41,  lngBase:-115, color:"#182e10",
+  { key:"namerica", name:"Amérique du Nord", lngMin:-140, lngMax:-60, latMin:35, latMax:60, color:"#182e10",
     species:[
-      {name:"Séquoia Géant",     icon:"🌲", rarity:"legendary"},
-      {name:"Pin Bristlecone",   icon:"🌲", rarity:"epic"},
-      {name:"Chêne Rouge",       icon:"🌳", rarity:"uncommon"},
-      {name:"Érable à Sucre",    icon:"🍁", rarity:"common"},
+      {name:"Séquoia Géant",    kind:"tall",     icon:"🌲", rarity:"legendary", canopy:["#1c4d30","#2c6b44"]},
+      {name:"Pin Bristlecone",  kind:"conifer",  icon:"🌲", rarity:"epic",      canopy:["#3d4d2e","#5c6b44"]},
+      {name:"Chêne Rouge",      kind:"broadleaf", icon:"🌳", rarity:"uncommon", canopy:["#7d3a2f","#a85440"]},
+      {name:"Érable à Sucre",   kind:"blossom",  icon:"🍁", rarity:"common",    canopy:["#c9782f","#e89a42"]},
     ]},
-  { key:"europe", name:"Europe",              latBase:47,  lngBase:12,  color:"#1c2e14",
+  { key:"europe", name:"Forêts d'Europe", lngMin:-8, lngMax:35, latMin:43, latMax:65, color:"#1c2e14",
     species:[
-      {name:"Chêne Millénaire",  icon:"🌳", rarity:"epic"},
-      {name:"If Sacré",          icon:"🌲", rarity:"rare"},
-      {name:"Hêtre des Carpates",icon:"🌳", rarity:"uncommon"},
-      {name:"Peuplier d'Italie", icon:"🌴", rarity:"common"},
+      {name:"Chêne Millénaire",   kind:"broadleaf", icon:"🌳", rarity:"epic",     canopy:["#2a5c2e","#3d7d42"]},
+      {name:"If Sacré",           kind:"conifer",   icon:"🌲", rarity:"rare",     canopy:["#123626","#1e4d38"]},
+      {name:"Hêtre des Carpates", kind:"broadleaf", icon:"🌳", rarity:"uncommon", canopy:["#33602f","#478042"]},
+      {name:"Peuplier d'Italie",  kind:"poplar",    icon:"🌴", rarity:"common",   canopy:["#3d6b3c","#548a52"]},
     ]},
-  { key:"oceania", name:"Océanie",            latBase:-25, lngBase:133, color:"#122e28",
+  { key:"oceania", name:"Océanie", lngMin:113, lngMax:178, latMin:-45, latMax:-10, color:"#122e28",
     species:[
-      {name:"Eucalyptus Roi",    icon:"🌳", rarity:"rare"},
-      {name:"Kauri Millénaire",  icon:"🌲", rarity:"legendary"},
-      {name:"Banksia Côtière",   icon:"🌿", rarity:"common"},
-      {name:"Araucaria Ancien",  icon:"🌲", rarity:"epic"},
+      {name:"Eucalyptus Roi",   kind:"poplar",  icon:"🌳", rarity:"rare",      canopy:["#4a7d5c","#68a078"]},
+      {name:"Kauri Millénaire", kind:"tall",    icon:"🌲", rarity:"legendary", canopy:["#1c4d3c","#2c6b54"]},
+      {name:"Banksia Côtière",  kind:"shrub",   icon:"🌿", rarity:"common",    canopy:["#5c7d3c","#7d9e52"]},
+      {name:"Araucaria Ancien", kind:"conifer", icon:"🌲", rarity:"epic",      canopy:["#173d30","#235c46"]},
     ]},
+];
+
+// Silhouettes continentales très simplifiées (points [lng, lat]) — juste assez pour situer les régions
+// dans un planisphère reconnaissable ; ce ne sont pas des tracés cartographiques exacts.
+const CONTINENTS = [
+  { name:"Amérique du Nord", pts:[[-168,66],[-155,71],[-125,70],[-95,68],[-80,62],[-65,50],[-55,48],
+      [-60,45],[-70,42],[-75,35],[-81,25],[-97,26],[-97,18],[-105,20],[-115,30],[-124,40],[-124,49],[-130,55],[-145,60],[-168,66]] },
+  { name:"Amérique du Sud", pts:[[-79,9],[-77,1],[-70,-4],[-70,-18],[-63,-22],[-58,-34],[-62,-40],
+      [-68,-52],[-72,-52],[-70,-40],[-71,-18],[-77,-6],[-81,2],[-79,9]] },
+  { name:"Afrique", pts:[[-17,15],[-16,7],[-10,5],[3,6],[9,4],[9,-3],[13,-6],[12,-17],[16,-28],
+      [26,-34],[32,-27],[33,-18],[40,-16],[43,-3],[41,6],[45,11],[38,15],[32,22],[25,31],[10,32],
+      [-6,35],[-10,29],[-17,15]] },
+  { name:"Europe", pts:[[-9,38],[-9,43],[-5,48],[2,51],[5,53],[11,54],[18,55],[24,60],[30,60],
+      [28,53],[24,49],[26,44],[19,42],[13,42],[9,44],[3,43],[-2,37],[-9,38]] },
+  { name:"Asie", pts:[[26,44],[35,45],[45,48],[55,52],[65,55],[75,58],[90,62],[105,62],[120,60],
+      [135,55],[142,46],[140,36],[130,33],[122,30],[110,22],[103,10],[97,6],[92,15],[80,20],
+      [70,24],[62,25],[52,26],[45,27],[35,37],[26,44]] },
+  { name:"Australie", pts:[[113,-22],[115,-33],[122,-34],[131,-32],[137,-35],[141,-38],[147,-38],
+      [150,-33],[153,-27],[145,-17],[142,-11],[133,-12],[128,-15],[122,-18],[113,-22]] },
 ];
 
 const OWNER_NAMES = ["EcoVentures_Fund","GreenRoot_88","TerraNova.eth","CanopyBaron","Silvicole_Prime",
   "RainforestDAO","VerdantCapital","OakAndOre","BioReserve_Zed","Arborly_Invest"];
 
-/* =================
+/* ============================================================
+   2. GÉOMÉTRIE HEXAGONALE + PROJECTION GÉOGRAPHIQUE
+   ============================================================
+   La grille hexagonale (q,r) est projetée sur un planisphère réel :
+   chaque colonne/ligne correspond à une tranche de longitude/latitude.
+   Les parcelles ne sont générées que dans les zones forestières réelles
+   définies par REGIONS (bbox lng/lat), avec une bordure organique.
+*/
+
+const HEX_SIZE = 15;        // rayon de base en px (avant zoom)
+const GRID_COLS = 92;       // couvre -180° à +180°
+const GRID_ROWS = 34;       // couvre +78° à -62° de latitude
+const LNG_MIN = -180, LNG_MAX = 180;
+const LAT_MAX = 78, LAT_MIN = -62;
+
+function hexToPixel(q, r){
+  const w = HEX_SIZE * 1.5;
+  const h = HEX_SIZE * Math.sqrt(3);
+  const x = w * q;
+  const y = h * (r + (q % 2 !== 0 ? 0.5 : 0));
+  return { x, y };
+}
+
+// Projection continue lng/lat <-> pixel monde, alignée sur le même repère que hexToPixel
+function lngLatToPixel(lng, lat){
+  const q = (lng - LNG_MIN) / (LNG_MAX - LNG_MIN) * GRID_COLS;
+  const r = (LAT_MAX - lat) / (LAT_MAX - LAT_MIN) * GRID_ROWS;
+  return { x: HEX_SIZE*1.5*q, y: HEX_SIZE*Math.sqrt(3)*r };
+}
+function qrToLngLat(q, r){
+  const lng = LNG_MIN + (q / GRID_COLS) * (LNG_MAX - LNG_MIN);
+  const lat = LAT_MAX - (r / GRID_ROWS) * (LAT_MAX - LAT_MIN);
+  return { lng, lat };
+}
+function pixelToLngLat(x, y){
+  const q = x / (HEX_SIZE*1.5);
+  const r = y / (HEX_SIZE*Math.sqrt(3));
+  return qrToLngLat(q, r);
+}
+
+function seededRandom(seed){
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  return function(){
+    s = (s * 16807) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function pickRarity(rand){
+  const r = rand() * 100;
+  let acc = 0;
+  for(let i=0;i<RARITY_KEYS.length;i++){
+    acc += RARITY_WEIGHTS[i];
+    if (r <= acc) return RARITY_KEYS[i];
+  }
+  return "common";
+}
+
+function regionAt(lng, lat){
+  for (const region of REGIONS){
+    if (lng >= region.lngMin && lng <= region.lngMax && lat >= region.latMin && lat <= region.latMax){
+      return region;
+    }
+  }
+  return null;
+}
+
+/* ============================================================
+   3. GÉNÉRATION DU MONDE
+   ============================================================ */
+
+const world = new Map(); // key "q,r" -> parcel object
+const rand = seededRandom(918273);
+const FEATHER_DEG = 3.5; // largeur de la bordure organique de forêt
+
+let uidCounter = 1;
+for(let q=0; q<GRID_COLS; q++){
+  for(let r=0; r<GRID_ROWS; r++){
+    const { lng, lat } = qrToLngLat(q, r);
+    const region = regionAt(lng, lat);
+    if (!region) continue; // hors des zones forestières réelles => pas de parcelle
+
+    // bordure organique : moins de densité près des limites de la région + bruit interne (clairières)
+    const distEdge = Math.min(lng-region.lngMin, region.lngMax-lng, lat-region.latMin, region.latMax-lat);
+    const edgeT = Math.min(1, Math.max(0, distEdge / FEATHER_DEG));
+    const glade = Math.sin(q*0.31 + r*0.27) * Math.cos(r*0.19 - q*0.11);
+    const density = edgeT * 0.85 + 0.15;
+    if (rand() > density || glade < -0.62) continue;
+
+    const species = region.species[Math.floor(rand()*region.species.length)];
+    const rarity = rand() < 0.65 ? species.rarity : pickRarity(rand); // biaisé vers la rareté typique de l'espèce
+    const rarityInfo = RARITIES[rarity];
+    const basePrice = 40 * rarityInfo.mult;
+    const price = Math.round(basePrice * (0.7 + rand()*0.9));
+    const dailyYield = +(price * 0.0026 * (0.8+rand()*0.5)).toFixed(3);
+
+    let owner = "free";
+    let ownerName = null;
+    const ownRoll = rand();
+    if (ownRoll < 0.22){ owner = "other"; ownerName = OWNER_NAMES[Math.floor(rand()*OWNER_NAMES.length)]; }
+
+    world.set(q+","+r, {
+      id: "PLC-" + String(uidCounter++).padStart(5,"0"),
+      q, r,
+      region: region.key,
+      regionName: region.name,
+      name: species.name,
+      icon: species.icon,
+      kind: species.kind,
+      canopy: species.canopy,
+      trunkColor: species.trunk || "#5c4632",
+      rarity,
+      price,
+      dailyYield,
+      owner,        // "free" | "me" | "other"
+      ownerName,
+      lat: lat.toFixed(4), lng: lng.toFixed(4),
+    });
+  }
+}
+
+/* ============================================================
+   4. ÉTAT GLOBAL / CAMÉRA
+   ============================================================ */
+
+const canvas = document.getElementById('mapCanvas');
+const ctx = canvas.getContext('2d');
+
+let camera = { x: 0, y: 0, zoom: 1 };
+let dragging = false, dragStart = null, cameraStart = null, dragMoved = false;
+let selectedKey = null;
+let godMode = false;
+
+const state = {
+  points: 0,
+};
+
+function resize(){
+  canvas.width = window.innerWidth * devicePixelRatio;
+  canvas.height = window.innerHeight * devicePixelRatio;
+  canvas.style.width = window.innerWidth + "px";
+  canvas.style.height = window.innerHeight + "px";
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// vue mondiale au démarrage, légèrement centrée sur l'hémisphère nord (plus de forêts)
+(function initCamera(){
+  const p = lngLatToPixel(15, 15);
+  camera.x = -p.x;
+  camera.y = -p.y;
+  camera.zoom = window.innerWidth < 860 ? 0.85 : 1.5;
+})();
+
+/* ============================================================
+   5. RENDU CANVAS
+   ============================================================ */
+
+function worldToScreen(x, y){
+  const w = window.innerWidth, h = window.innerHeight;
+  return {
+    x: w/2 + (x + camera.x) * camera.zoom,
+    y: h/2 + (y + camera.y) * camera.zoom,
+  };
+}
+function screenToWorld(sx, sy){
+  const w = window.innerWidth, h = window.innerHeight;
+  return {
+    x: (sx - w/2)/camera.zoom - camera.x,
+    y: (sy - h/2)/camera.zoom - camera.y,
+  };
+}
+
+function hexCorners(cx, cy, size){
+  const pts = [];
+  for(let i=0;i<6;i++){
+    const angle = Math.PI/180 * (60*i);
+    pts.push([ cx + size*Math.cos(angle), cy + size*Math.sin(angle) ]);
+  }
+  return pts;
+}
+
+function drawHex(cx, cy, size, fill, stroke, lineWidth){
+  const pts = hexCorners(cx, cy, size);
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for(let i=1;i<6;i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+  if (fill){ ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke){ ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth||1; ctx.stroke(); }
+}
+
+let hoveredKey = null;
+
+/* ---- Fond planisphère : silhouettes continentales + graticule ---- */
+function drawWorldBackdrop(w, h){
+  // graticule (méridiens/parallèles tous les 20°)
+  ctx.strokeStyle = "rgba(52,211,153,0.05)";
+  ctx.lineWidth = 1;
+  for (let lng=-180; lng<=180; lng+=20){
+    const a = worldToScreen(lngLatToPixel(lng, LAT_MAX).x, lngLatToPixel(lng, LAT_MAX).y);
+    const b = worldToScreen(lngLatToPixel(lng, LAT_MIN).x, lngLatToPixel(lng, LAT_MIN).y);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  }
+  for (let lat=-60; lat<=80; lat+=20){
+    const a = worldToScreen(lngLatToPixel(LNG_MIN, lat).x, lngLatToPixel(LNG_MIN, lat).y);
+    const b = worldToScreen(lngLatToPixel(LNG_MAX, lat).x, lngLatToPixel(LNG_MAX, lat).y);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+  }
+  // équateur, un peu plus marqué
+  const eqA = worldToScreen(lngLatToPixel(LNG_MIN,0).x, lngLatToPixel(LNG_MIN,0).y);
+  const eqB = worldToScreen(lngLatToPixel(LNG_MAX,0).x, lngLatToPixel(LNG_MAX,0).y);
+  ctx.strokeStyle = "rgba(52,211,153,0.09)";
+  ctx.beginPath(); ctx.moveTo(eqA.x,eqA.y); ctx.lineTo(eqB.x,eqB.y); ctx.stroke();
+
+  // silhouettes des continents
+  ctx.fillStyle = "rgba(52,211,153,0.045)";
+  ctx.strokeStyle = "rgba(52,211,153,0.14)";
+  ctx.lineWidth = 1;
+  CONTINENTS.forEach(cont => {
+    ctx.beginPath();
+    cont.pts.forEach(([lng,lat], i) => {
+      const p = lngLatToPixel(lng, lat);
+      const s = worldToScreen(p.x, p.y);
+      if (i===0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
+    });
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  });
+}
+
+/* ---- Rendu vectoriel "réaliste" des arbres (remplace les emojis plats) ---- */
+function circle(cx, cy, r){ ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill(); }
+
+function drawTree(cx, cy, size, p){
+  const [cA, cB] = p.canopy || ["#2a6b3e", "#3a8c54"];
+  const trunkColor = p.trunkColor || "#5c4632";
+  const kind = p.kind || "broadleaf";
+  const s = size; // échelle locale
+
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // ombre portée douce
+  ctx.beginPath();
+  ctx.ellipse(0, s*0.62, s*0.5, s*0.14, 0, 0, Math.PI*2);
+  ctx.fillStyle = "rgba(0,0,0,0.25)";
+  ctx.fill();
+
+  switch(kind){
+    case "conifer": {
+      ctx.fillStyle = trunkColor;
+      ctx.fillRect(-s*0.05, s*0.18, s*0.1, s*0.32);
+      const layers = 3;
+      for(let i=0;i<layers;i++){
+        const ly = s*0.35 - i*s*0.28;
+        const lw = s*(0.52 - i*0.1);
+        ctx.beginPath();
+        ctx.moveTo(0, ly - s*0.34);
+        ctx.lineTo(-lw, ly);
+        ctx.lineTo(lw, ly);
+        ctx.closePath();
+        ctx.fillStyle = i%2===0 ? cA : cB;
+        ctx.fill();
+      }
+      break;
+    }
+    case "baobab": {
+      ctx.fillStyle = trunkColor;
+      ctx.beginPath();
+      ctx.ellipse(0, s*0.18, s*0.26, s*0.4, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = cA;
+      for(let i=0;i<4;i++){
+        const ang = -Math.PI/2 + (i-1.5)*0.5;
+        circle(Math.cos(ang)*s*0.22, -s*0.32 + Math.sin(ang)*s*0.14, s*0.17);
+      }
+      ctx.fillStyle = cB;
+      circle(0, -s*0.4, s*0.19);
+      break;
+    }
+    case "banyan": {
+      ctx.fillStyle = trunkColor;
+      ctx.fillRect(-s*0.07, s*0.05, s*0.14, s*0.4);
+      ctx.fillStyle = cA;
+      ctx.beginPath();
+      ctx.ellipse(0, -s*0.12, s*0.58, s*0.28, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = trunkColor; ctx.lineWidth = Math.max(0.6, s*0.03);
+      for(let i=-2;i<=2;i++){
+        ctx.beginPath();
+        ctx.moveTo(i*s*0.18, -s*0.05);
+        ctx.lineTo(i*s*0.14, s*0.32);
+        ctx.stroke();
+      }
+      ctx.fillStyle = cB;
+      circle(0, -s*0.22, s*0.24);
+      break;
+    }
+    case "palm": {
+      ctx.strokeStyle = trunkColor; ctx.lineWidth = Math.max(1, s*0.08);
+      ctx.beginPath();
+      ctx.moveTo(0, s*0.45);
+      ctx.quadraticCurveTo(s*0.08, s*0.1, s*0.02, -s*0.18);
+      ctx.stroke();
+      ctx.strokeStyle = cA; ctx.lineWidth = Math.max(1, s*0.06);
+      for(let i=0;i<6;i++){
+        const ang = -Math.PI/2 + (i - 2.5) * 0.42;
+        ctx.beginPath();
+        ctx.moveTo(s*0.02, -s*0.18);
+        ctx.quadraticCurveTo(
+          s*0.02 + Math.cos(ang)*s*0.22, -s*0.18 + Math.sin(ang)*s*0.14,
+          s*0.02 + Math.cos(ang)*s*0.4, -s*0.18 + Math.sin(ang)*s*0.32
+        );
+        ctx.stroke();
+      }
+      break;
+    }
+    case "bamboo": {
+      ctx.strokeStyle = cA; ctx.lineWidth = Math.max(1, s*0.06);
+      for(let i=-1;i<=1;i++){
+        const h0 = s*0.42, xoff = i*s*0.16;
+        ctx.beginPath();
+        ctx.moveTo(xoff, s*0.45);
+        ctx.lineTo(xoff - i*s*0.04, -h0);
+        ctx.stroke();
+        for(let n=1;n<4;n++){
+          const ny = s*0.45 - n*(s*0.87/4);
+          ctx.beginPath();
+          ctx.moveTo(xoff - s*0.05, ny);
+          ctx.lineTo(xoff + s*0.05, ny);
+          ctx.strokeStyle = cB; ctx.lineWidth = Math.max(0.6, s*0.03);
+          ctx.stroke();
+          ctx.strokeStyle = cA; ctx.lineWidth = Math.max(1, s*0.06);
+        }
+      }
+      ctx.fillStyle = cB;
+      circle(0, -s*0.42, s*0.1);
+      break;
+    }
+    case "blossom": {
+      ctx.fillStyle = trunkColor;
+      ctx.fillRect(-s*0.05, s*0.1, s*0.1, s*0.36);
+      ctx.fillStyle = cA;
+      [[0,-s*0.28,s*0.3],[-s*0.22,-s*0.14,s*0.2],[s*0.22,-s*0.14,s*0.2]].forEach(([dx,dy,r]) => circle(dx,dy,r));
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      for(let i=0;i<7;i++){
+        const ang = rand2(cx+i,cy)*Math.PI*2;
+        const rad = rand2(cx,cy+i)*s*0.3;
+        circle(Math.cos(ang)*rad, -s*0.24 + Math.sin(ang)*rad*0.6, s*0.028);
+      }
+      break;
+    }
+    case "umbrella": {
+      ctx.strokeStyle = trunkColor; ctx.lineWidth = Math.max(1, s*0.07);
+      ctx.beginPath(); ctx.moveTo(0, s*0.45); ctx.lineTo(0, -s*0.05); ctx.stroke();
+      ctx.fillStyle = cA;
+      ctx.beginPath();
+      ctx.ellipse(0, -s*0.12, s*0.5, s*0.13, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = cB;
+      ctx.beginPath();
+      ctx.ellipse(0, -s*0.17, s*0.34, s*0.09, 0, 0, Math.PI*2);
+      ctx.fill();
+      break;
+    }
+    case "poplar": case "tall": {
+      const trunkH = kind === "tall" ? s*0.62 : s*0.5;
+      ctx.fillStyle = trunkColor;
+      ctx.fillRect(-s*0.045, s*0.42-trunkH, s*0.09, trunkH);
+      ctx.fillStyle = cA;
+      ctx.beginPath();
+      ctx.ellipse(0, s*0.42-trunkH-s*0.14, s*0.16, s*0.24, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = cB;
+      ctx.beginPath();
+      ctx.ellipse(0, s*0.42-trunkH-s*0.02, s*0.13, s*0.16, 0, 0, Math.PI*2);
+      ctx.fill();
+      break;
+    }
+    case "birch": {
+      ctx.fillStyle = trunkColor;
+      ctx.fillRect(-s*0.045, s*0.05, s*0.09, s*0.4);
+      ctx.strokeStyle = "#33362f"; ctx.lineWidth = Math.max(0.5, s*0.025);
+      for(let i=0;i<3;i++){
+        ctx.beginPath();
+        ctx.moveTo(-s*0.045, s*0.14+i*s*0.11);
+        ctx.lineTo(s*0.045, s*0.11+i*s*0.11);
+        ctx.stroke();
+      }
+      ctx.fillStyle = cA;
+      [[0,-s*0.18,s*0.26],[-s*0.16,-s*0.05,s*0.16],[s*0.16,-s*0.05,s*0.16]].forEach(([dx,dy,r]) => circle(dx,dy,r));
+      break;
+    }
+    case "shrub": {
+      ctx.fillStyle = cA;
+      [[0,s*0.1,s*0.24],[-s*0.14,s*0.16,s*0.15],[s*0.14,s*0.16,s*0.15]].forEach(([dx,dy,r]) => circle(dx,dy,r));
+      break;
+    }
+    default: { // broadleaf
+      ctx.fillStyle = trunkColor;
+      ctx.fillRect(-s*0.055, s*0.08, s*0.11, s*0.38);
+      ctx.fillStyle = cA;
+      [[0,-s*0.22,s*0.3],[-s*0.2,-s*0.08,s*0.2],[s*0.2,-s*0.08,s*0.2],[0,-s*0.05,s*0.22]].forEach(([dx,dy,r]) => circle(dx,dy,r));
+      ctx.fillStyle = cB;
+      circle(-s*0.06, -s*0.26, s*0.13);
+    }
+  }
+  ctx.restore();
+}
+function rand2(a,b){ const x = Math.sin(a*127.1+b*311.7)*43758.5453; return x - Math.floor(x); }
+
+function render(){
+  const w = window.innerWidth, h = window.innerHeight;
+  ctx.clearRect(0,0,w,h);
+  drawWorldBackdrop(w, h);
+
+  const size = HEX_SIZE * camera.zoom * 0.98;
+  const showTrees = camera.zoom > 0.55;
+  const showLabels = camera.zoom > 1.6;
+  const showPrices = camera.zoom > 2.4;
+
+  // culling: ne dessiner que les hex visibles
+  const margin = size * 3;
+
+  world.forEach((p, key) => {
+    const { x, y } = hexToPixel(p.q, p.r);
+    const s = worldToScreen(x, y);
+    if (s.x < -margin || s.x > w+margin || s.y < -margin || s.y > h+margin) return;
+
+    const rarityInfo = RARITIES[p.rarity];
+    let fill, stroke, lw = 1;
+
+    if (p.owner === "me"){
+      fill = "rgba(52,211,153,0.22)"; stroke = "#34d399"; lw = 1.6;
+    } else if (p.owner === "other"){
+      fill = "rgba(107,122,148,0.12)"; stroke = "rgba(107,122,148,0.5)";
+    } else {
+      fill = "rgba(255,255,255,0.015)"; stroke = "rgba(52,211,153,0.14)";
+    }
+
+    if (key === selectedKey){ stroke = "#b6ff5c"; lw = 2.4; }
+    else if (key === hoveredKey){ stroke = rarityInfo.color; lw = 2; }
+
+    drawHex(s.x, s.y, size, fill, stroke, lw);
+
+    // pastille de rareté (coin)
+    if (size > 6){
+      ctx.beginPath();
+      ctx.arc(s.x + size*0.62, s.y - size*0.5, Math.max(1.8, size*0.09), 0, Math.PI*2);
+      ctx.fillStyle = rarityInfo.color;
+      if (rarityInfo.glow){
+        ctx.shadowColor = rarityInfo.color;
+        ctx.shadowBlur = 7;
+      }
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // arbre vectoriel réaliste (à faible zoom : simple pastille de couleur pour la lisibilité du planisphère)
+    if (showTrees && size > 6){
+      drawTree(s.x, s.y - size*0.12, size*1.5, p);
+    } else if (size > 1.5){
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, Math.max(1, size*0.4), 0, Math.PI*2);
+      ctx.fillStyle = (p.canopy && p.canopy[0]) || "#2a6b3e";
+      ctx.globalAlpha = 0.85;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    if (showLabels && size > 22){
+      ctx.font = `600 ${Math.max(8, size*0.15)}px 'SF Mono', monospace`;
+      ctx.fillStyle = "rgba(234,255,244,0.9)";
+      ctx.textAlign = "center";
+      const label = p.name.length > 16 ? p.name.slice(0,15)+"…" : p.name;
+      ctx.fillText(label, s.x, s.y + size*0.62);
+    }
+    if (showPrices && size > 32){
+      ctx.font = `500 ${Math.max(8, size*0.13)}px 'SF Mono', monospace`;
+      ctx.fillStyle = p.owner === "free" ? "rgba(182,255,92,0.85)" : "rgba(159,184,172,0.7)";
+      ctx.fillText(p.owner === "free" ? ("$"+p.price) : (p.owner==="me"?"À MOI":"PRIS"), s.x, s.y + size*0.84);
+    }
+  });
+
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+
+/* ============================================================
+   6. HIT TESTING (pixel -> parcelle)
+   ============================================================ */
+
+function findParcelAt(sx, sy){
+  const world_pt = screenToWorld(sx, sy);
+  // estimation q,r approx puis recherche locale
+  const wApprox = HEX_SIZE * 1.5;
+  const hApprox = HEX_SIZE * Math.sqrt(3);
+  const qApprox = Math.round(world_pt.x / wApprox);
+  const rApprox = Math.round(world_pt.y / hApprox);
+
+  let best = null, bestDist = Infinity;
+  for(let dq=-2; dq<=2; dq++){
+    for(let dr=-2; dr<=2; dr++){
+      const q = qApprox+dq, r = rApprox+dr;
+      const key = q+","+r;
+      const p = world.get(key);
+      if (!p) continue;
+      const { x, y } = hexToPixel(q, r);
+      const dist = Math.hypot(x-world_pt.x, y-world_pt.y);
+      if (dist < bestDist){ bestDist = dist; best = key; }
+    }
+  }
+  // seuil de tolérance
+  if (best && bestDist < HEX_SIZE*1.05) return best;
+  return null;
+}
+
+function getNeighbors(q, r){
+  // voisinage hexagonal offset pour colonnes impaires/paires (flat-top, "odd-q")
+  const parity = q % 2;
+  const evenOffsets = [[1,0],[1,-1],[0,-1],[-1,-1],[-1,0],[0,1]];
+  const oddOffsets  = [[1,1],[1,0],[0,-1],[-1,0],[-1,1],[0,1]];
+  const offsets = parity ? oddOffsets : evenOffsets;
+  return offsets.map(([dq,dr]) => {
+    const key = (q+dq)+","+(r+dr);
+    return world.get(key) || null;
+  });
+}
+
+/* ============================================================
+   7. INTERACTIONS SOURIS / TACTILE
+   ============================================================ */
+
+canvas.addEventListener('mousedown', (e) => {
+  dragging = true; dragMoved = false;
+  dragStart = { x: e.clientX, y: e.clientY };
+  cameraStart = { x: camera.x, y: camera.y };
+  canvas.classList.add('dragging');
+});
+window.addEventListener('mousemove', (e) => {
+  if (dragging){
+    const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
+    if (Math.abs(dx)+Math.abs(dy) > 4) dragMoved = true;
+    camera.x = cameraStart.x + dx/camera.zoom;
+    camera.y = cameraStart.y + dy/camera.zoom;
+  } else {
+    const key = findParcelAt(e.clientX, e.clientY);
+    hoveredKey = key;
+    canvas.style.cursor = key ? 'pointer' : 'grab';
+  }
+});
+window.addEventListener('mouseup', (e) => {
+  if (dragging && !dragMoved){
+    const key = findParcelAt(e.clientX, e.clientY);
+    if (key) selectParcel(key);
+  }
+  dragging = false;
+  canvas.classList.remove('dragging');
+});
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const before = screenToWorld(e.clientX, e.clientY);
+  const factor = e.deltaY > 0 ? 0.9 : 1.111;
+  camera.zoom = Math.min(4.5, Math.max(0.18, camera.zoom * factor));
+  const after = screenToWorld(e.clientX, e.clientY);
+  camera.x += (after.x - before.x);
+  camera.y += (after.y - before.y);
+  updateReadout();
+}, { passive:false });
+
+document.getElementById('zoomIn').addEventListener('click', () => zoomStep(1.25));
+document.getElementById('zoomOut').addEventListener('click', () => zoomStep(0.8));
+function zoomStep(factor){
+  const cx = window.innerWidth/2, cy = window.innerHeight/2;
+  const before = screenToWorld(cx, cy);
+  camera.zoom = Math.min(4.5, Math.max(0.18, camera.zoom * factor));
+  const after = screenToWorld(cx, cy);
+  camera.x += (after.x - before.x);
+  camera.y += (after.y - before.y);
+  updateReadout();
+}
+
+// touch support (mobile) — preventDefault pour éviter tout conflit avec le scroll/zoom du navigateur
+let lastTouchDist = null;
+let touchStartTime = 0;
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 1){
+    dragging = true; dragMoved = false;
+    touchStartTime = Date.now();
+    dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    cameraStart = { x: camera.x, y: camera.y };
+  } else if (e.touches.length === 2){
+    dragging = false;
+    lastTouchDist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+  }
+}, {passive:false});
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 1 && dragging){
+    const dx = e.touches[0].clientX - dragStart.x, dy = e.touches[0].clientY - dragStart.y;
+    if (Math.abs(dx)+Math.abs(dy) > 6) dragMoved = true;
+    camera.x = cameraStart.x + dx/camera.zoom;
+    camera.y = cameraStart.y + dy/camera.zoom;
+  } else if (e.touches.length === 2 && lastTouchDist){
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    const factor = dist / lastTouchDist;
+    camera.zoom = Math.min(4.5, Math.max(0.18, camera.zoom * factor));
+    lastTouchDist = dist;
+  }
+}, {passive:false});
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  if (!dragMoved && e.changedTouches.length === 1 && dragging){
+    const key = findParcelAt(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    if (key) selectParcel(key);
+  }
+  dragging = false; lastTouchDist = null;
+}, {passive:false});
+
+function updateReadout(){
+  document.getElementById('roZoom').textContent = camera.zoom.toFixed(2) + "×";
+  const centerWorld = screenToWorld(window.innerWidth/2, window.innerHeight/2);
+  const { lng, lat } = pixelToLngLat(centerWorld.x, centerWorld.y);
+  document.getElementById('roLat').textContent = lat.toFixed(2)+"°";
+  document.getElementById('roLng').textContent = lng.toFixed(2)+"°";
+  document.getElementById('scaleReadout').textContent =
+    camera.zoom > 2.5 ? "1 parcelle ≈ 0.5 ha" : camera.zoom > 0.9 ? "Vue régionale" : "Vue planétaire";
+}
+setInterval(updateReadout, 300);
+
+/* ============================================================
+   8. GOD MODE
+   ============================================================ */
+
+const godToggle = document.getElementById('godToggle');
+godToggle.addEventListener('click', () => {
+  godMode = !godMode;
+  godToggle.classList.toggle('active', godMode);
+  showToast(godMode ? "⚡ God Mode activé — attribution instantanée" : "God Mode désactivé");
+  if (selectedKey) renderDetailPanel(selectedKey); // refresh bouton
+});
+
+/* ============================================================
+   9. SÉLECTION & PANNEAU DE DÉTAIL
+   ============================================================ */
+
+const detailPanel = document.getElementById('detailPanel');
+
+function selectParcel(key){
+  selectedKey = key;
+  renderDetailPanel(key);
+  detailPanel.classList.add('open');
+}
+
+function closeDetail(){
+  detailPanel.classList.remove('open');
+  selectedKey = null;
+}
+
+function ownerRowHTML(p){
+  if (p.owner === "me"){
+    return `<div class="detail-owner-row"><span class="owner-dot" style="background:var(--owned)"></span> Cette parcelle vous appartient</div>`;
+  }
+  if (p.owner === "other"){
+    return `<div class="detail-owner-row"><span class="owner-dot" style="background:var(--other)"></span> Propriétaire : <b style="color:var(--text-hi)">${p.ownerName}</b></div>`;
+  }
+  return `<div class="detail-owner-row"><span class="owner-dot" style="background:var(--free); border:1px solid var(--line-strong)"></span> Parcelle libre — disponible à l'acquisition</div>`;
+}
+
+function buyButtonHTML(p){
+  if (p.owner === "me"){
+    return `<button class="buy-btn mine" disabled>✔ Déjà dans votre canopée</button>`;
+  }
+  if (p.owner === "other"){
+    return `<button class="buy-btn locked" disabled>🔒 Propriété d'un autre explorateur</button>`;
+  }
+  if (godMode){
+    return `<button class="buy-btn claim" id="claimBtn">⚡ Attribution instantanée — God Mode</button>`;
+  }
+  return `<button class="buy-btn locked" disabled>Paiement indisponible en démo — activez God Mode</button>`;
+}
+
+function renderDetailPanel(key){
+  const p = world.get(key);
+  if (!p) return;
+  const rarityInfo = RARITIES[p.rarity];
+  const neighbors = getNeighbors(p.q, p.r).filter(Boolean);
+
+  detailPanel.innerHTML = `
+    <div class="detail-hero">
+      <div class="rarity-band" style="background:${rarityInfo.color}"></div>
+      <div class="detail-close" id="closeDetailBtn">✕</div>
+      <div class="detail-hero-icon">${p.icon}</div>
+    </div>
+    <div class="detail-body">
+      <div class="detail-tag" style="background:${rarityInfo.color}22; color:${rarityInfo.color}; border:1px solid ${rarityInfo.color}55">${rarityInfo.label}</div>
+      <div class="detail-title">${p.name}</div>
+      <div class="detail-region">${p.regionName} · Parcelle ${p.id}</div>
+
+      ${ownerRowHTML(p)}
+
+      <div class="detail-stats-grid">
+        <div class="dstat">
+          <div class="dstat-label">Coordonnées GPS</div>
+          <div class="dstat-value mono-small">${p.lat}, ${p.lng}</div>
+        </div>
+        <div class="dstat">
+          <div class="dstat-label">Rendement / jour</div>
+          <div class="dstat-value">$${p.dailyYield.toFixed(3)}</div>
+        </div>
+        <div class="dstat">
+          <div class="dstat-label">Prix</div>
+          <div class="dstat-value">$${p.price.toLocaleString('fr-FR')}</div>
+        </div>
+        <div class="dstat">
+          <div class="dstat-label">Rareté</div>
+          <div class="dstat-value" style="color:${rarityInfo.color}">${rarityInfo.label}</div>
+        </div>
+      </div>
+
+      <div class="detail-desc">
+        Spécimen recensé dans la canopée de ${p.regionName}. Chaque parcelle génère un rendement passif quotidien en points éco, proportionnel à sa rareté et à la santé de son biotope environnant.
+      </div>
+
+      ${buyButtonHTML(p)}
+
+      <div class="neighbors-title">
+        <span>Canopée voisine</span>
+        <span style="color:var(--text-low); font-weight:400;">${neighbors.length} parcelle${neighbors.length>1?'s':''}</span>
+      </div>
+      <div class="neighbors-grid">
+        ${neighbors.length ? neighbors.map(n => {
+          const nr = RARITIES[n.rarity];
+          const statusColor = n.owner === "me" ? "var(--owned)" : n.owner === "other" ? "var(--other)" : "var(--free)";
+          return `<div class="neighbor-cell" data-key="${n.q},${n.r}" title="${n.name}">
+            <div class="n-status" style="background:${statusColor}"></div>
+            <div class="n-icon">${n.icon}</div>
+            <div class="n-price">${n.owner==='free' ? '$'+n.price : (n.owner==='me'?'À moi':'Pris')}</div>
+          </div>`;
+        }).join('') : '<div class="neighbor-empty">Zone frontalière — aucune canopée voisine</div>'}
+      </div>
+    </div>
+  `;
+
+  document.getElementById('closeDetailBtn').addEventListener('click', closeDetail);
+
+  const claimBtn = document.getElementById('claimBtn');
+  if (claimBtn){
+    claimBtn.addEventListener('click', () => claimParcel(key));
+  }
+
+  detailPanel.querySelectorAll('.neighbor-cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      const k = cell.getAttribute('data-key');
+      if (world.get(k)) selectParcel(k);
+    });
+  });
+}
+
+function claimParcel(key){
+  const p = world.get(key);
+  if (!p || p.owner !== "free") return;
+  p.owner = "me";
+  state.points += Math.round(p.price * 0.12);
+  showToast(`🌱 ${p.name} rejoint votre canopée !`);
+  renderDetailPanel(key);
+  updateStats();
+}
+
+/* ============================================================
+   10. STATS SIDEBAR
+   ============================================================ */
+
+function updateStats(){
+  let owned = 0, totalValue = 0, totalYield = 0;
+  world.forEach(p => {
+    if (p.owner === "me"){
+      owned++;
+      totalValue += p.price;
+      totalYield += p.dailyYield;
+    }
+  });
+  document.getElementById('statTrees').textContent = owned;
+  document.getElementById('statValue').textContent = "$" + totalValue.toLocaleString('fr-FR');
+  document.getElementById('statYield').textContent = "$" + totalYield.toFixed(2);
+  document.getElementById('statYieldPts').textContent = "+" + Math.round(totalYield*4) + " pts éco / jour";
+  document.getElementById('statPoints').textContent = state.points.toLocaleString('fr-FR');
+}
+updateStats();
+
+/* ============================================================
+   11. LISTE DES RÉGIONS (sidebar) + navigation rapide
+   ============================================================ */
+
+const regionListEl = document.getElementById('regionList');
+REGIONS.forEach(region => {
+  let count = 0;
+  world.forEach(p => { if (p.region === region.key) count++; });
+  const row = document.createElement('div');
+  row.className = 'region-item';
+  row.innerHTML = `<span>${region.name}</span><span class="count">${count}</span>`;
+  row.addEventListener('click', () => flyToRegion(region));
+  regionListEl.appendChild(row);
+});
+
+function flyToRegion(region){
+  // centre la caméra sur le centre géographique réel de la région
+  const lng = (region.lngMin + region.lngMax) / 2;
+  const lat = (region.latMin + region.latMax) / 2;
+  const p = lngLatToPixel(lng, lat);
+  camera.x = -p.x;
+  camera.y = -p.y;
+  camera.zoom = 3.2;
+  closeSidebar();
+}
+
+/* ============================================================
+   12b. TIROIR SIDEBAR (mobile)
+   ============================================================ */
+const sidebarEl = document.getElementById('sidebar');
+const sidebarScrim = document.getElementById('sidebarScrim');
+const menuToggle = document.getElementById('menuToggle');
+
+function openSidebar(){
+  sidebarEl.classList.add('open');
+  sidebarScrim.classList.add('open');
+}
+function closeSidebar(){
+  sidebarEl.classList.remove('open');
+  sidebarScrim.classList.remove('open');
+}
+menuToggle.addEventListener('click', () => {
+  sidebarEl.classList.contains('open') ? closeSidebar() : openSidebar();
+});
+sidebarScrim.addEventListener('click', closeSidebar);
+
+/* ============================================================
+   12. TOASTS
+   ============================================================ */
+
+function showToast(msg){
+  const wrap = document.getElementById('toastWrap');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 2600);
+}
+
+/* ============================================================
+   13. ESC pour fermer le panneau
+   ============================================================ */
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeDetail();
+});
+
+updateReadout();
+showToast("🌍 Bienvenue sur CANOPY — le marché des canopées rares");
+
+})();
+</script>
+</body>
+</html>
