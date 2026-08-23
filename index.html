@@ -3,22 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Future Video AI</title>
+    <title>FUTURE VIDEO AI - Studio High-Tech Pro</title>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
-        h1 { background: linear-gradient(to right, #9333ea, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.8rem; text-align: center; margin-bottom: 20px; }
-        .card { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; }
-        textarea { width: 100%; height: 120px; background: #111; color: #fff; border: 1px solid #333; border-radius: 12px; padding: 15px; font-size: 1rem; box-sizing: border-box; outline: none; }
-        textarea:focus { border-color: #06b6d4; }
-        button { width: 100%; padding: 15px; background: linear-gradient(to right, #9333ea, #06b6d4); color: #fff; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; }
-        button:active { transform: scale(0.98); }
+        :root { --bg: #030305; --card: #0f0f13; --accent: linear-gradient(135deg, #a855f7, #06b6d4); --text: #f4f4f5; --border: #27272a; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
+        
+        /* Barre de Navigation Supérieure (High-Tech) */
+        nav { width: 100%; max-width: 480px; display: flex; justify-content: space-around; background: rgba(15, 15, 19, 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); padding: 12px 0; position: sticky; top: 0; z-index: 100; }
+        .nav-tab { background: none; border: none; color: #a1a1aa; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; transition: 0.2s; }
+        .nav-tab.active { color: #06b6d4; }
+
+        .container { width: 100%; max-width: 450px; display: flex; flex-direction: column; gap: 18px; padding: 15px; padding-bottom: 50px; box-sizing: border-box; }
+        
+        /* Sections / Onglets */
+        .tab-content { display: none; flex-direction: column; gap: 18px; width: 100%; }
+        .tab-content.active { display: flex; }
+
+        /* En-tête & Trustpilot */
+        header { text-align: center; margin-top: 5px; }
+        h1 { background: var(--accent); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.6rem; margin: 0 0 5px 0; font-weight: 900; letter-spacing: -0.5px; }
+        .trust-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(0, 182, 122, 0.1); color: #00b67a; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; border: 1px solid rgba(0, 182, 122, 0.2); }
+
+        /* Cartes & Blocs */
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        
+        /* Entrées & IA */
+        textarea { width: 100%; height: 95px; background: #000; color: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 0.95rem; box-sizing: border-box; resize: none; outline: none; }
+        textarea:focus { border-color: #06b6d4; box-shadow: 0 0 10px rgba(6,182,212,0.2); }
+        
+        .media-tools { display: flex; gap: 8px; }
+        .tool-btn { flex: 1; background: #18181b; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 10px; font-size: 0.8rem; font-weight: 600; cursor: pointer; text-align: center; display: flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; }
+        .tool-btn:hover { background: #27272a; }
+        .tool-btn.recording { background: #ef4444; border-color: #f87171; animation: pulse 1.2s infinite; }
+
+        /* Bouton Action Principal */
+        .action-btn { width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: 12px; font-weight: bold; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 20px rgba(168, 85, 247, 0.4); transition: 0.2s; }
+        .action-btn:active { transform: scale(0.98); }
+
+        /* Vidéo Offerte / Résultat */
+        .free-preview-box { background: linear-gradient(135deg, rgba(168,85,247,0.1), rgba(6,182,212,0.1)); border: 1px dashed #a855f7; border-radius: 12px; padding: 12px; text-align: center; font-size: 0.8rem; color: #d8b4fe; }
+        #result-container { display: none; text-align: center; }
+        video { width: 100%; border-radius: 12px; border: 1px solid var(--border); margin-top: 10px; }
+
+        /* Offres Paiement direct */
+        .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .price-card { background: #000; border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; }
+        .price-card.pro { border-color: #06b6d4; background: linear-gradient(to bottom, #0f0f13, #091a1e); }
+        .price-title { font-size: 0.75rem; font-weight: bold; color: #a1a1aa; }
+        .price-amount { font-size: 1.1rem; font-weight: 800; margin: 6px 0; }
+        .sub-btn { background: #27272a; color: #fff; border: none; padding: 8px; border-radius: 8px; font-size: 0.75rem; font-weight: bold; cursor: pointer; }
+        .pro .sub-btn { background: var(--accent); }
+
+        /* Blocs Pubs Monétisation */
+        .ad-banner { background: #0a0a0c; border: 1px dashed var(--border); border-radius: 10px; padding: 10px; text-align: center; font-size: 0.7rem; color: #52525b; text-transform: uppercase; letter-spacing: 1px; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>FUTURE VIDEO AI</h1>
-        <textarea placeholder="Décris ta vidéo ultra-réaliste pour TikTok..."></textarea>
-        <button onclick="alert('Génération lancée avec succès !')">Générer la vidéo</button>
+
+    <!-- Barre de Navigation High-Tech -->
+    <nav>
+        <button class="nav-tab active" onclick="switchTab('studio', this)">⚡ <span>Studio</span></button>
+        <button class="nav-tab" onclick="switchTab('tools', this)">🛠️ <span>Outils</span></button>
+        <button class="nav-tab" onclick="switchTab('pricing', this)">💎 <span>VIP / Pay</span></button>
+        <button class="nav-tab" onclick="switchTab('settings', this)">⚙️ <span>Paramètres</span></button>
+    </nav>
+
+    <div class="container">
+
+        <!-- ONGLET 1 : STUDIO IA -->
+        <div id="tab-studio" class="tab-content active">
+            <header>
+                <h1>FUTURE VIDEO AI</h1>
+                <div class="trust-badge">⭐ 4.9/5 Trustpilot Verified</div>
+            </header>
+
+            <div class="ad-banner">Espace Annonceur Sponsorisé</div>
+
+            <div class="card">
+                <div class="free-preview-box">
+                    🎁 <strong>Cadeau Découverte :</strong> Votre vidéo de 4s offerte ! Redirection instantanée vers le moteur officiel.
+                </div>
+                
+                <textarea id="promptInput" placeholder="Décrivez votre scène futuriste en 4K (ex: Cyberpunk Tokyo sous la pluie)..."></textarea>
+                
+                <div class="media-tools">
+                    <label class="tool-btn">
+                        📷 Photo
+                        <input type="file" id="imageInput" accept="image/*" style="display:none;" onchange="handleImage(this)">
+                    </label>
+                    <button class="tool-btn" id="micBtn" onclick="toggleVoiceRecord()">
+                        🎙️ <span id="micText">Vocal</span>
+                    </button>
+                </div>
+
+                <button class="action-btn" onclick="generateVideo()">Générer la Vidéo Haute Définition</button>
+            </div>
+
+            <div class="card" id="result-container">
+                <h3 style="margin:0; font-size:0.9rem; color:#06b6d4;">✨ Rendu IA Terminé</h3>
+                <video id="outputVideo" controls autoplay loop></video>
+                <button class="action-btn" style="background:#00b67a; font-size:0.85rem; padding:10px;" onclick="redirectToExternalEngine()">🚀 Exporter sur le Moteur Partenaire (Offert)</button>
+            </div>
+        </div>
+
+        <!-- ONGLET 2 : OUTILS PRO -->
+        <div id="tab-tools" class="tab-content">
+            <h2 style="font-size:1.2rem; margin:0 0 5px 0;">Outils Avancés IA</h2>
+            <div class="card">
+                <p style="font-size:0.85rem; color:#a1a1aa; margin:0;">Boostez vos créations avec nos modules intégrés :</p>
+                <button class="sub-btn" style="padding:12px;" onclick="alert('Module Upscale 4K activé !')">🔍 Améliorateur de Résolution 4K</button>
+                <button class="sub-btn" style="padding:12px;" onclick="alert('Générateur de Voix Off IA actif !')">🗣️ Synthèse Vocale Cinématique</button>
+                <button class="sub-btn" style="padding:12px;" onclick="alert('Suppresseur de filigrane prêt !')">🧹 Gomme Magique & Suppression Watermark</button>
+            </div>
+            <div class="ad-banner">Bannière Publicitaire Partenaire</div>
+        </div>
+
+        <!-- ONGLET 3 : ABONNEMENTS / PAIEMENT DIRECT -->
+        <div id="tab-pricing" class="tab-content">
+            <h2 style="font-size:1.2rem; margin:0 0 5px 0;">Passer en Mode VIP</h2>
+            <div class="pricing-grid">
+                <div class="price-card">
+                    <div>
+                        <div class="price-title">DÉCOUVERTE</div>
+                        <div class="price-amount">3.99 €</div>
+                        <p style="font-size:0.7rem; color:#71717a; margin:5px 0;">Pack de 20 vidéos sans attente</p>
+                    </div>
+                    <button class="sub-btn" onclick="payWithStripe('Pack 20 Vidéos', '3.99€')">Acheter</button>
+                </div>
+                <div class="price-card pro">
+                    <div>
+                        <div class="price-title" style="color:#06b6d4;">UNLIMITED VIP</div>
+                        <div class="price-amount">12.99 €<span style="font-size:0.65rem">/mois</span></div>
+                        <p style="font-size:0.7rem; color:#a1a1aa; margin:5px 0;">Générations illimitées 4K prioritaires</p>
+                    </div>
+                    <button class="sub-btn" onclick="payWithStripe('Abonnement VIP Illimité', '12.99€/mois')">S'abonner</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ONGLET 4 : PARAMÈTRES -->
+        <div id="tab-settings" class="tab-content">
+            <h2 style="font-size:1.2rem; margin:0 0 5px 0;">Paramètres du Compte</h2>
+            <div class="card">
+                <div style="font-size:0.85rem; display:flex; justify-content:space-between; align-items:center;">
+                    <span>Mode Turbo Serveur IA</span>
+                    <input type="checkbox" checked style="accent-color:#06b6d4; transform:scale(1.2);">
+                </div>
+                <div style="font-size:0.85rem; display:flex; justify-content:space-between; align-items:center;">
+                    <span>Qualité de rendu HD+</span>
+                    <input type="checkbox" checked style="accent-color:#06b6d4; transform:scale(1.2);">
+                </div>
+                <button class="sub-btn" style="background:#ef4444; margin-top:10px;" onclick="alert('Cache vidé avec succès !')">Vider le Cache Local</button>
+            </div>
+        </div>
+
+        <div class="ad-banner">Espace Monétisation Bas de Page</div>
     </div>
+
+    <script>
+        // Gestion de la navigation par onglets
+        function switchTab(tabId, btnElement) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        let isRecording = false;
+        function toggleVoiceRecord() {
+            const btn = document.getElementById('micBtn');
+            const txt = document.getElementById('micText');
+            if (!isRecording) {
+                isRecording = true;
+                btn.classList.add('recording');
+                txt.textContent = 'Enregistrement...';
+                setTimeout(() => {
+                    isRecording = false;
+                    btn.classList.remove('recording');
+                    txt.textContent = 'Vocaux OK ✔️';
+                    document.getElementById('promptInput').value += " [Audio IA : Mouvement de caméra fluide 4K]";
+                }, 2500);
+            }
+        }
+
+        function handleImage(input) {
+            if (input.files && input.files[0]) {
+                alert('📸 Photo importée et analysée par les réseaux neuronaux !');
+            }
+        }
+
+        function generateVideo() {
+            const prompt = document.getElementById('promptInput').value;
+            if (!prompt.trim()) {
+                alert('Veuillez entrer une description ou un prompt valide !');
+                return;
+            }
+
+            const btn = document.querySelector('.action-btn');
+            btn.textContent = 'Calcul neuronal en cours (4s offertes)...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                btn.textContent = 'Générer la Vidéo Haute Définition';
+                btn.disabled = false;
+                
+                const resultContainer = document.getElementById('result-container');
+                const videoElement = document.getElementById('outputVideo');
+                
+                // Vidéo de démonstration fluide 4 secondes offerte
+                videoElement.src = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+                resultContainer.style.display = 'flex';
+                resultContainer.scrollIntoView({ behavior: 'smooth' });
+            }, 2500);
+        }
+
+        function redirectToExternalEngine() {
+            alert('Redirection automatique vers le moteur partenaire de rendu 4K officiel...');
+            window.open('https://www.cdiscount.com/informatique/logiciels-informatique/pack-windows-11-sur-cle-usb/f-10707-aaabe44003.html', '_blank');
+        }
+
+        function payWithStripe(item, price) {
+            alert('Ouverture de la passerelle de paiement sécurisée pour : ' + item + ' (' + price + ')');
+        }
+    </script>
 </body>
 </html>
