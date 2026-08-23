@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Live - World Country War (God Mode Enabled)</title>
+    <title>TikTok Live - Ultimate World Country War</title>
     <style>
         * {
             box-sizing: border-box;
@@ -11,7 +11,7 @@
             padding: 0;
         }
         body {
-            background-color: #070913;
+            background-color: #05070f;
             color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
@@ -22,24 +22,24 @@
             user-select: none;
         }
 
-        /* Top Marquee Banner */
+        /* Bande passante (Ticker) */
         .ticker-container {
-            background: linear-gradient(90deg, #1e1b4b, #311042, #1e1b4b);
+            background: linear-gradient(90deg, #1e1b4b, #4c1d95, #1e1b4b);
             border-bottom: 2px solid #a855f7;
             overflow: hidden;
             white-space: nowrap;
-            padding: 6px 0;
-            font-size: 11px;
-            font-weight: 600;
+            padding: 8px 0;
+            font-size: 13px;
+            font-weight: 700;
             flex-shrink: 0;
         }
         .ticker-text {
             display: inline-block;
-            animation: ticker 30s linear infinite;
+            animation: ticker 35s linear infinite;
             color: #f3e8ff;
         }
         .ticker-text span {
-            margin: 0 20px;
+            margin: 0 25px;
         }
         .ticker-text .highlight {
             color: #f43f5e;
@@ -50,173 +50,189 @@
             100% { transform: translate3d(-50%, 0, 0); }
         }
 
-        /* Top Bar with God Mode info */
+        /* Barre supérieure */
         .top-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: rgba(15, 23, 42, 0.95);
-            padding: 6px 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 12px;
-            z-index: 30;
+            padding: 8px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 13px;
+            z-index: 50;
         }
         .god-badge {
             background: #ef4444;
             color: white;
-            padding: 2px 8px;
+            padding: 4px 12px;
             border-radius: 6px;
             font-weight: bold;
-            font-size: 10px;
+            font-size: 11px;
             text-transform: uppercase;
             animation: pulse 1.5s infinite;
         }
         @keyframes pulse {
-            0% { opacity: 0.8; }
+            0% { opacity: 0.8; transform: scale(1); }
             50% { opacity: 1; transform: scale(1.05); }
-            100% { opacity: 0.8; }
+            100% { opacity: 0.8; transform: scale(1); }
         }
 
-        /* Arena where bubbles float scattered */
+        /* Arène de combat */
         .arena {
             position: relative;
             flex: 1;
             width: 100%;
-            background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
             overflow: hidden;
         }
 
-        /* Scattered Country Bubbles */
+        /* Bulles de pays centrées et réactives */
         .country-bubble {
             position: absolute;
-            background: rgba(30, 41, 59, 0.85);
+            background: rgba(30, 41, 59, 0.9);
             backdrop-filter: blur(8px);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            padding: 8px 12px;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            padding: 12px 16px;
             border-radius: 50px;
             text-align: center;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.8);
             cursor: pointer;
-            transition: transform 0.2s ease, border-color 0.2s ease;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-width: 85px;
+            min-width: 105px;
+            transform: translate(-50%, -50%) scale(1);
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.2s ease;
             z-index: 10;
         }
         .country-bubble:hover {
             border-color: #f43f5e;
-            transform: scale(1.1) !important;
+            filter: brightness(1.2);
         }
         .country-bubble h4 {
-            font-size: 11px;
+            font-size: 12px;
             white-space: nowrap;
+            font-weight: 700;
         }
         .country-bubble .pts {
-            font-size: 9px;
-            opacity: 0.8;
+            font-size: 11px;
+            opacity: 0.9;
+            font-weight: 600;
+            margin-top: 2px;
         }
 
-        /* Event Feed & Floating items */
+        /* Flux d'événements et cadeaux flottants */
         .event-feed {
             position: absolute;
-            bottom: 10px;
-            left: 10px;
+            bottom: 12px;
+            left: 12px;
             display: flex;
             flex-direction: column-reverse;
-            gap: 4px;
-            max-height: 120px;
+            gap: 6px;
+            max-height: 150px;
             overflow: hidden;
             pointer-events: none;
             z-index: 40;
-            font-size: 10px;
+            font-size: 12px;
         }
         .feed-item {
-            background: rgba(30, 41, 59, 0.9);
-            padding: 4px 8px;
-            border-radius: 6px;
-            border-left: 2px solid #a855f7;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border-left: 3px solid #a855f7;
             white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
 
         .floating-gifts {
             position: absolute;
-            bottom: 10px;
-            right: 10px;
+            bottom: 12px;
+            right: 12px;
             display: flex;
             flex-direction: column-reverse;
             align-items: flex-end;
-            gap: 4px;
-            max-height: 130px;
+            gap: 6px;
+            max-height: 150px;
             overflow: hidden;
             pointer-events: none;
             z-index: 40;
-            font-size: 10px;
+            font-size: 12px;
         }
         .floating-gift-item {
-            background: rgba(15, 23, 42, 0.9);
-            border: 1px solid rgba(168, 85, 247, 0.5);
-            padding: 4px 8px;
-            border-radius: 6px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(168, 85, 247, 0.6);
+            padding: 6px 12px;
+            border-radius: 8px;
             animation: fadeInOut 3s ease forwards;
             white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
         @keyframes fadeInOut {
-            0% { opacity: 0; transform: translateY(10px); }
+            0% { opacity: 0; transform: translateY(15px); }
             20% { opacity: 1; transform: translateY(0); }
             80% { opacity: 1; transform: translateY(0); }
-            100% { opacity: 0; transform: translateY(-10px); }
+            100% { opacity: 0; transform: translateY(-15px); }
         }
     </style>
 </head>
 <body>
 
-    <!-- Top Scrolling Banner -->
+    <!-- Bande passante explicative -->
     <div class="ticker-container">
         <div class="ticker-text">
-            <span>🌹 ROSE (1 💎) - LION (29999 💎) - CASTLE (20000 💎) - UNIVERSE (34999 💎)</span>
-            <span>🌍 CLICK ANY COUNTRY BUBBLE TO TEST GOD MODE (SENDS GIFT INSTANTLY) 🌍</span>
-            <span class="highlight">🚀 THE BIGGER THE GIFT, THE FASTER THE BUBBLE GROWS! 🚀</span>
+            <span>🎁 CADEAUX TIKTOK : Rose (1💎) | Finger Heart (5💎) | Cap (99💎) | Perfume (200💎) | Money Gun (500💎) | Concha (1000💎) | Falcon (10999💎) | Castle (20000💎) | Lion (29999💎) | Universe (34999💎)</span>
+            <span>🌐 USA | France (FR) | Brésil (BR) | Russie (RU) | Chine (CN) | Inde (IN) | Mexique (MX) | Allemagne (DE) | Japon (JP) | UK | Italie (IT) | Espagne (ES) | Canada (CA) | Australie (AU)</span>
+            <span class="highlight">🚀 PLUS LE CADEAU EST GROS, PLUS LA BULLE GRANDIT VITE ET FORT ! CLIQUEZ SUR LES BULLES POUR TESTER ! 🚀</span>
         </div>
     </div>
 
-    <!-- Top Bar with God Mode info -->
+    <!-- Barre de contrôle -->
     <div class="top-bar">
-        <span><b>TikTok Live War</b> (Multi-Country Arena)</span>
-        <span class="god-badge">God Mode Active: Click Bubbles to Test</span>
+        <span><b>TikTok Live War</b> - Mode Arène Multilingue</span>
+        <span class="god-badge">Mode Interactif Actif (Cliquez sur une bulle)</span>
     </div>
 
-    <!-- Arena with Scattered Country Bubbles -->
+    <!-- Arène -->
     <div class="arena" id="arena">
-        <!-- Event Feed -->
         <div class="event-feed" id="eventFeed"></div>
-        <!-- Floating Gifts -->
         <div class="floating-gifts" id="floatingGifts"></div>
     </div>
 
     <script>
+        // Liste complète des pays avec coordonnées en pourcentage pour un centrage parfait
         const countries = {
-            usa: { name: "USA", flag: "🇺🇸", score: 12500, x: 12, y: 28, color: "#38bdf8" },
-            france: { name: "France", flag: "🇫🇷", score: 15000, x: 48, y: 22, color: "#60a5fa" },
-            brazil: { name: "Brazil", flag: "🇧🇷", score: 8200, x: 28, y: 62, color: "#4ade80" },
-            russia: { name: "Russia", flag: "🇷🇺", score: 6400, x: 75, y: 18, color: "#f87171" },
-            china: { name: "China", flag: "🇨🇳", score: 9100, x: 78, y: 48, color: "#fca5a5" },
-            india: { name: "India", flag: "🇮🇳", score: 11000, x: 65, y: 52, color: "#fbbf24" },
-            mexico: { name: "Mexico", flag: "🇲🇽", score: 5400, x: 15, y: 55, color: "#34d399" },
-            germany: { name: "Germany", flag: "🇩🇪", score: 7300, x: 56, y: 35, color: "#a78bfa" },
-            japan: { name: "Japan", flag: "🇯🇵", score: 9800, x: 88, y: 35, color: "#f43f5e" },
-            uk: { name: "UK", flag: "🇬🇧", score: 8900, x: 40, y: 32, color: "#38bdf8" }
+            usa: { name: "USA", flag: "🇺🇸", score: 25000, x: 18, y: 30, color: "#38bdf8" },
+            canada: { name: "Canada", flag: "🇨🇦", score: 18000, x: 18, y: 15, color: "#f87171" },
+            mexico: { name: "Mexique", flag: "🇲🇽", score: 15000, x: 16, y: 52, color: "#34d399" },
+            brazil: { name: "Brésil", flag: "🇧🇷", score: 32000, x: 32, y: 72, color: "#4ade80" },
+            uk: { name: "UK", flag: "🇬🇧", score: 22000, x: 44, y: 22, color: "#60a5fa" },
+            france: { name: "France", flag: "🇫🇷", score: 35000, x: 53, y: 32, color: "#a78bfa" },
+            germany: { name: "Allemagne", flag: "🇩🇪", score: 29000, x: 62, y: 24, color: "#fbbf24" },
+            italy: { name: "Italie", flag: "🇮🇹", score: 21000, x: 60, y: 44, color: "#f43f5e" },
+            spain: { name: "Espagne", flag: "🇪🇸", score: 19000, x: 46, y: 46, color: "#fb923c" },
+            russia: { name: "Russie", flag: "🇷🇺", score: 28000, x: 78, y: 18, color: "#f87171" },
+            india: { name: "Inde", flag: "🇮🇳", score: 31000, x: 72, y: 56, color: "#38bdf8" },
+            china: { name: "Chine", flag: "🇨🇳", score: 40000, x: 84, y: 42, color: "#fca5a5" },
+            japan: { name: "Japon", flag: "🇯🇵", score: 33000, x: 92, y: 32, color: "#34d399" },
+            australia: { name: "Australie", flag: "🇦🇺", score: 24000, x: 85, y: 78, color: "#60a5fa" }
         };
 
+        // Vrais cadeaux TikTok et leur valeur respective
         const gifts = [
-            { name: "Rose", icon: "🌹", value: 1, weight: 1 },
-            { name: "Lion", icon: "🦁", value: 29999, weight: 40 },
-            { name: "Castle", icon: "🏰", value: 20000, weight: 30 },
-            { name: "Universe", icon: "🌌", value: 34999, weight: 60 }
+            { name: "Rose", icon: "🌹", value: 1 },
+            { name: "Finger Heart", icon: "🫶", value: 5 },
+            { name: "Cap", icon: "🧢", value: 99 },
+            { name: "Perfume", icon: "🧴", value: 200 },
+            { name: "Money Gun", icon: "💸", value: 500 },
+            { name: "Concha", icon: "🐚", value: 1000 },
+            { name: "Falcon", icon: "🦅", value: 10999 },
+            { name: "Castle", icon: "🏰", value: 20000 },
+            { name: "Lion", icon: "🦁", value: 29999 },
+            { name: "Universe", icon: "🌌", value: 34999 }
         ];
 
-        const usernames = ["Jean", "Mike", "Alex", "Lucas", "Sophie", "Emma", "David", "Carlos", "Priya", "Hiroshi"];
+        const usernames = ["Jean", "Mike", "Alex", "Lucas", "Sophie", "Emma", "David", "Carlos", "Priya", "Hiroshi", "Marco", "Matteo", "Chloé"];
         const arena = document.getElementById("arena");
 
         function initBubbles() {
@@ -228,14 +244,14 @@
                 bubble.style.left = c.x + "%";
                 bubble.style.top = c.y + "%";
                 bubble.style.borderColor = c.color;
-                bubble.style.background = c.color + "33";
+                bubble.style.background = c.color + "22";
                 
                 bubble.innerHTML = `
                     <h4>${c.flag} ${c.name}</h4>
                     <span class="pts" id="pts-${key}">${c.score.toLocaleString()} pts</span>
                 `;
 
-                // God Mode: Click to test growth instantly
+                // Clic utilisateur pour simuler un cadeau instantané
                 bubble.addEventListener("click", () => {
                     let randomGift = gifts[Math.floor(Math.random() * gifts.length)];
                     let randomUser = usernames[Math.floor(Math.random() * usernames.length)];
@@ -254,34 +270,38 @@
 
                 let bubble = document.getElementById(`bubble-${key}`);
                 if (bubble) {
-                    let scale = 1 + (c.score / 150000);
-                    if (scale > 1.5) scale = 1.5;
-                    bubble.style.transform = `scale(${scale})`;
+                    // Calcul de la taille de la bulle proportionnelle au score
+                    let scale = 1 + (c.score / 75000);
+                    if (scale > 2.4) scale = 2.4;
+                    bubble.style.transform = `translate(-50%, -50%) scale(${scale})`;
                 }
             }
         }
 
         function addEvent(username, countryKey, gift) {
             let country = countries[countryKey];
-            country.score += gift.value * (gift.weight > 1 ? 50 : 1);
+            country.score += gift.value * 120; // Plus le cadeau a de valeur, plus l'impact est grand
             updateUI();
 
+            // Flux de texte des événements
             let feed = document.getElementById("eventFeed");
             let feedItem = document.createElement("div");
             feedItem.className = "feed-item";
-            feedItem.innerHTML = `${country.flag} <b>${username}</b> sent <span style="color:#f43f5e;">${gift.icon} ${gift.name}</span> to ${country.name}`;
+            feedItem.innerHTML = `${country.flag} <b>${username}</b> a envoyé <span style="color:#f43f5e;">${gift.icon} ${gift.name} (${gift.value}💎)</span> à ${country.name}`;
             feed.prepend(feedItem);
-            if (feed.children.length > 4) feed.lastChild.remove();
+            if (feed.children.length > 5) feed.lastChild.remove();
 
+            // Animation du cadeau flottant
             let floating = document.getElementById("floatingGifts");
             let floatItem = document.createElement("div");
             floatItem.className = "floating-gift-item";
-            floatItem.innerHTML = `${country.flag} ${gift.icon} <b>${gift.name}</b> (+${(gift.value * (gift.weight > 1 ? 50 : 1)).toLocaleString()})`;
+            floatItem.innerHTML = `${country.flag} ${gift.icon} <b>${gift.name}</b> (+${(gift.value * 120).toLocaleString()} pts)`;
             floating.prepend(floatItem);
             setTimeout(() => floatItem.remove(), 3000);
             if (floating.children.length > 5) floating.lastChild.remove();
         }
 
+        // Simulation automatique en arrière-plan
         setInterval(() => {
             let keys = Object.keys(countries);
             let randomCountry = keys[Math.floor(Math.random() * keys.length)];
@@ -291,6 +311,7 @@
         }, 2200);
 
         initBubbles();
+        updateUI();
     </script>
 </body>
 </html>
