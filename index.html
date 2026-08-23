@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TikTok Live - World Country War</title>
+    <title>TikTok Live - World Country War (God Mode Enabled)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -11,7 +11,7 @@
             padding: 0;
         }
         body {
-            background-color: #0b0f19;
+            background-color: #070913;
             color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
@@ -19,6 +19,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            user-select: none;
         }
 
         /* Top Marquee Banner */
@@ -34,7 +35,7 @@
         }
         .ticker-text {
             display: inline-block;
-            animation: ticker 25s linear infinite;
+            animation: ticker 30s linear infinite;
             color: #f3e8ff;
         }
         .ticker-text span {
@@ -49,94 +50,73 @@
             100% { transform: translate3d(-50%, 0, 0); }
         }
 
-        /* Scoreboard Bar */
-        .scoreboard {
+        /* Top Bar with God Mode info */
+        .top-bar {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 6px;
-            background: rgba(15, 23, 42, 0.9);
-            padding: 6px 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            flex-shrink: 0;
-            z-index: 10;
-        }
-        .score-pill {
-            background: rgba(30, 41, 59, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 4px 10px;
-            border-radius: 14px;
-            font-size: 11px;
-            font-weight: bold;
-            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 4px;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 6px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 12px;
+            z-index: 30;
+        }
+        .god-badge {
+            background: #ef4444;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 10px;
+            text-transform: uppercase;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 0.8; }
         }
 
-        /* Main Game Arena */
+        /* Arena where bubbles float scattered */
         .arena {
             position: relative;
             flex: 1;
             width: 100%;
             background: radial-gradient(circle at center, #111827 0%, #030712 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
             overflow: hidden;
         }
 
-        /* Clean Background Grid simulating map */
-        .world-map-bg {
+        /* Scattered Country Bubbles */
+        .country-bubble {
             position: absolute;
-            width: 95%;
-            height: 95%;
-            background: radial-gradient(ellipse at center, rgba(30,41,59,0.3) 0%, rgba(3,7,18,0.8) 70%);
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.05);
-            pointer-events: none;
-        }
-
-        /* Country Nodes layout using a clean grid to prevent overlaps */
-        .countries-grid {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-template-rows: repeat(3, auto);
-            padding: 20px;
-            gap: 15px;
-            z-index: 5;
-            align-items: center;
-            justify-items: center;
-        }
-
-        .country-node {
             background: rgba(30, 41, 59, 0.85);
-            backdrop-filter: blur(6px);
-            border: 2px solid rgba(255, 255, 255, 0.25);
-            padding: 10px 16px;
-            border-radius: 14px;
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 12px;
+            border-radius: 50px;
             text-align: center;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
-            transition: transform 0.3s ease;
-            width: 130px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.7);
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 85px;
+            z-index: 10;
         }
-        .country-node h3 {
-            font-size: 13px;
-            letter-spacing: 0.5px;
-            margin-bottom: 2px;
+        .country-bubble:hover {
+            border-color: #f43f5e;
+            transform: scale(1.1) !important;
         }
-        .country-node .score-val {
+        .country-bubble h4 {
             font-size: 11px;
-            opacity: 0.85;
+            white-space: nowrap;
         }
-
-        #node-usa { border-color: #38bdf8; background: rgba(14, 165, 233, 0.25); }
-        #node-france { border-color: #60a5fa; background: rgba(37, 99, 235, 0.25); }
-        #node-brazil { border-color: #4ade80; background: rgba(34, 197, 94, 0.25); }
-        #node-russia { border-color: #f87171; background: rgba(239, 68, 68, 0.25); }
-        #node-china { border-color: #fca5a5; background: rgba(220, 38, 38, 0.25); grid-column: span 2; }
+        .country-bubble .pts {
+            font-size: 9px;
+            opacity: 0.8;
+        }
 
         /* Event Feed & Floating items */
         .event-feed {
@@ -146,10 +126,10 @@
             display: flex;
             flex-direction: column-reverse;
             gap: 4px;
-            max-height: 130px;
+            max-height: 120px;
             overflow: hidden;
             pointer-events: none;
-            z-index: 20;
+            z-index: 40;
             font-size: 10px;
         }
         .feed-item {
@@ -168,10 +148,10 @@
             flex-direction: column-reverse;
             align-items: flex-end;
             gap: 4px;
-            max-height: 150px;
+            max-height: 130px;
             overflow: hidden;
             pointer-events: none;
-            z-index: 20;
+            z-index: 40;
             font-size: 10px;
         }
         .floating-gift-item {
@@ -196,90 +176,94 @@
     <div class="ticker-container">
         <div class="ticker-text">
             <span>🌹 ROSE (1 💎) - LION (29999 💎) - CASTLE (20000 💎) - UNIVERSE (34999 💎)</span>
-            <span>🇺🇸 USA | 🇫🇷 FRANCE | 🇧🇷 BRAZIL | 🇷🇺 RUSSIA | 🇨🇳 CHINA</span>
-            <span class="highlight">🚀 THE BIGGER THE GIFT, THE FASTER YOUR COUNTRY GROWS! 🚀</span>
+            <span>🌍 CLICK ANY COUNTRY BUBBLE TO TEST GOD MODE (SENDS GIFT INSTANTLY) 🌍</span>
+            <span class="highlight">🚀 THE BIGGER THE GIFT, THE FASTER THE BUBBLE GROWS! 🚀</span>
         </div>
     </div>
 
-    <!-- Live Scoreboard -->
-    <div class="scoreboard" id="scoreboard">
-        <div class="score-pill" style="border-color: #38bdf8;">🇺🇸 USA: <span id="score-usa">12,500</span></div>
-        <div class="score-pill" style="border-color: #60a5fa;">🇫🇷 FRANCE: <span id="score-france">15,000</span></div>
-        <div class="score-pill" style="border-color: #4ade80;">🇧🇷 BRAZIL: <span id="score-brazil">8,200</span></div>
-        <div class="score-pill" style="border-color: #f87171;">🇷🇺 RUSSIA: <span id="score-russia">6,400</span></div>
-        <div class="score-pill" style="border-color: #fca5a5;">🇨🇳 CHINA: <span id="score-china">9,100</span></div>
+    <!-- Top Bar with God Mode info -->
+    <div class="top-bar">
+        <span><b>TikTok Live War</b> (Multi-Country Arena)</span>
+        <span class="god-badge">God Mode Active: Click Bubbles to Test</span>
     </div>
 
-    <!-- Arena with structured grid -->
-    <div class="arena">
-        <div class="world-map-bg"></div>
-
-        <div class="countries-grid">
-            <div class="country-node" id="node-usa">
-                <h3>🇺🇸 USA</h3>
-                <div class="score-val" id="val-usa">12,500 pts</div>
-            </div>
-            <div class="country-node" id="node-france">
-                <h3>🇫🇷 FRANCE</h3>
-                <div class="score-val" id="val-france">15,000 pts</div>
-            </div>
-            <div class="country-node" id="node-brazil">
-                <h3>🇧🇷 BRAZIL</h3>
-                <div class="score-val" id="val-brazil">8,200 pts</div>
-            </div>
-            <div class="country-node" id="node-russia">
-                <h3>🇷🇺 RUSSIA</h3>
-                <div class="score-val" id="val-russia">6,400 pts</div>
-            </div>
-            <div class="country-node" id="node-china" style="grid-column: span 2;">
-                <h3>🇨🇳 CHINA</h3>
-                <div class="score-val" id="val-china">9,100 pts</div>
-            </div>
-        </div>
-
+    <!-- Arena with Scattered Country Bubbles -->
+    <div class="arena" id="arena">
         <!-- Event Feed -->
         <div class="event-feed" id="eventFeed"></div>
-
         <!-- Floating Gifts -->
         <div class="floating-gifts" id="floatingGifts"></div>
     </div>
 
     <script>
         const countries = {
-            usa: { name: "USA", flag: "🇺🇸", score: 12500 },
-            france: { name: "FRANCE", flag: "🇫🇷", score: 15000 },
-            brazil: { name: "BRAZIL", flag: "🇧🇷", score: 8200 },
-            russia: { name: "RUSSIA", flag: "🇷🇺", score: 6400 },
-            china: { name: "CHINA", flag: "🇨🇳", score: 9100 }
+            usa: { name: "USA", flag: "🇺🇸", score: 12500, x: 12, y: 28, color: "#38bdf8" },
+            france: { name: "France", flag: "🇫🇷", score: 15000, x: 48, y: 22, color: "#60a5fa" },
+            brazil: { name: "Brazil", flag: "🇧🇷", score: 8200, x: 28, y: 62, color: "#4ade80" },
+            russia: { name: "Russia", flag: "🇷🇺", score: 6400, x: 75, y: 18, color: "#f87171" },
+            china: { name: "China", flag: "🇨🇳", score: 9100, x: 78, y: 48, color: "#fca5a5" },
+            india: { name: "India", flag: "🇮🇳", score: 11000, x: 65, y: 52, color: "#fbbf24" },
+            mexico: { name: "Mexico", flag: "🇲🇽", score: 5400, x: 15, y: 55, color: "#34d399" },
+            germany: { name: "Germany", flag: "🇩🇪", score: 7300, x: 56, y: 35, color: "#a78bfa" },
+            japan: { name: "Japan", flag: "🇯🇵", score: 9800, x: 88, y: 35, color: "#f43f5e" },
+            uk: { name: "UK", flag: "🇬🇧", score: 8900, x: 40, y: 32, color: "#38bdf8" }
         };
 
         const gifts = [
             { name: "Rose", icon: "🌹", value: 1, weight: 1 },
-            { name: "Lion", icon: "🦁", value: 29999, weight: 50 },
-            { name: "Castle", icon: "🏰", value: 20000, weight: 35 },
-            { name: "Universe", icon: "🌌", value: 34999, weight: 70 }
+            { name: "Lion", icon: "🦁", value: 29999, weight: 40 },
+            { name: "Castle", icon: "🏰", value: 20000, weight: 30 },
+            { name: "Universe", icon: "🌌", value: 34999, weight: 60 }
         ];
 
-        const usernames = ["Jean", "Mike", "Alex", "Lucas", "Sophie", "Emma", "David", "Carlos"];
+        const usernames = ["Jean", "Mike", "Alex", "Lucas", "Sophie", "Emma", "David", "Carlos", "Priya", "Hiroshi"];
+        const arena = document.getElementById("arena");
+
+        function initBubbles() {
+            for (let key in countries) {
+                let c = countries[key];
+                let bubble = document.createElement("div");
+                bubble.className = "country-bubble";
+                bubble.id = `bubble-${key}`;
+                bubble.style.left = c.x + "%";
+                bubble.style.top = c.y + "%";
+                bubble.style.borderColor = c.color;
+                bubble.style.background = c.color + "33";
+                
+                bubble.innerHTML = `
+                    <h4>${c.flag} ${c.name}</h4>
+                    <span class="pts" id="pts-${key}">${c.score.toLocaleString()} pts</span>
+                `;
+
+                // God Mode: Click to test growth instantly
+                bubble.addEventListener("click", () => {
+                    let randomGift = gifts[Math.floor(Math.random() * gifts.length)];
+                    let randomUser = usernames[Math.floor(Math.random() * usernames.length)];
+                    addEvent(randomUser, key, randomGift);
+                });
+
+                arena.appendChild(bubble);
+            }
+        }
 
         function updateUI() {
             for (let key in countries) {
                 let c = countries[key];
-                document.getElementById(`score-${key}`).innerText = c.score.toLocaleString();
-                document.getElementById(`val-${key}`).innerText = c.score.toLocaleString() + " pts";
-                
-                let node = document.getElementById(`node-${key}`);
-                if (node) {
-                    let computedScale = 1 + (c.score / 80000);
-                    if (computedScale > 1.35) computedScale = 1.35;
-                    node.style.transform = `scale(${computedScale})`;
+                let ptsEl = document.getElementById(`pts-${key}`);
+                if (ptsEl) ptsEl.innerText = c.score.toLocaleString() + " pts";
+
+                let bubble = document.getElementById(`bubble-${key}`);
+                if (bubble) {
+                    let scale = 1 + (c.score / 150000);
+                    if (scale > 1.5) scale = 1.5;
+                    bubble.style.transform = `scale(${scale})`;
                 }
             }
         }
 
         function addEvent(username, countryKey, gift) {
             let country = countries[countryKey];
-            country.score += gift.value * gift.weight;
+            country.score += gift.value * (gift.weight > 1 ? 50 : 1);
             updateUI();
 
             let feed = document.getElementById("eventFeed");
@@ -292,19 +276,21 @@
             let floating = document.getElementById("floatingGifts");
             let floatItem = document.createElement("div");
             floatItem.className = "floating-gift-item";
-            floatItem.innerHTML = `${country.flag} ${gift.icon} <b>${gift.name}</b> (+${(gift.value * gift.weight).toLocaleString()})`;
+            floatItem.innerHTML = `${country.flag} ${gift.icon} <b>${gift.name}</b> (+${(gift.value * (gift.weight > 1 ? 50 : 1)).toLocaleString()})`;
             floating.prepend(floatItem);
             setTimeout(() => floatItem.remove(), 3000);
             if (floating.children.length > 5) floating.lastChild.remove();
         }
 
         setInterval(() => {
-            let countryKeys = Object.keys(countries);
-            let randomCountry = countryKeys[Math.floor(Math.random() * countryKeys.length)];
+            let keys = Object.keys(countries);
+            let randomCountry = keys[Math.floor(Math.random() * keys.length)];
             let randomUser = usernames[Math.floor(Math.random() * usernames.length)];
             let randomGift = gifts[Math.floor(Math.random() * gifts.length)];
             addEvent(randomUser, randomCountry, randomGift);
-        }, 2500);
+        }, 2200);
+
+        initBubbles();
     </script>
 </body>
 </html>
