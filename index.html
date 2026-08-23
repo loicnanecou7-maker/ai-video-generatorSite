@@ -1,1461 +1,1110 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CANOPY — Le marché mondial des arbres rares</title>
-<style>
-  :root{
-    --bg-void: #050807;
-    --bg-panel: #0a1210;
-    --bg-panel-2: #0e1a16;
-    --line: rgba(52, 211, 153, 0.12);
-    --line-strong: rgba(52, 211, 153, 0.28);
-    --emerald: #34d399;
-    --emerald-bright: #6ffcc0;
-    --neon: #b6ff5c;
-    --gold: #e8c766;
-    --owned: #34d399;
-    --other: #6b7a94;
-    --free: #223430;
-    --text-hi: #eafff4;
-    --text-mid: #9fb8ac;
-    --text-low: #5c7268;
-    --danger: #ff6b6b;
-    --font-display: 'Canopy Display', Georgia, serif;
-    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-    --font-mono: 'SF Mono', 'Consolas', monospace;
-  }
-
-  *{ box-sizing: border-box; margin:0; padding:0; }
-  html,body{
-    height:100%; overflow:hidden;
-    background: var(--bg-void);
-    color: var(--text-hi);
-    font-family: var(--font-body);
-    -webkit-font-smoothing: antialiased;
-  }
-
-  #app{ position:relative; width:100vw; height:100vh; }
-
-  /* ---------- CANVAS MAP ---------- */
-  #mapCanvas{
-    position:absolute; inset:0;
-    display:block;
-    cursor: grab;
-    touch-action: none;
-    -webkit-user-select:none; user-select:none;
-    background:
-      radial-gradient(ellipse at 30% 20%, rgba(52,211,153,0.06), transparent 55%),
-      radial-gradient(ellipse at 75% 80%, rgba(182,255,92,0.04), transparent 50%),
-      var(--bg-void);
-  }
-  #mapCanvas.dragging{ cursor: grabbing; }
-
-  /* ---------- TOP BAR ---------- */
-  .topbar{
-    position:absolute; top:0; left:0; right:0;
-    height:64px;
-    display:flex; align-items:center; justify-content:space-between;
-    padding: 0 22px;
-    background: linear-gradient(180deg, rgba(5,8,7,0.92), rgba(5,8,7,0.0));
-    pointer-events:none;
-    z-index: 20;
-  }
-  .brand{
-    display:flex; align-items:center; gap:10px;
-    pointer-events:auto;
-  }
-  .brand-mark{
-    width:30px; height:30px;
-    display:flex; align-items:center; justify-content:center;
-    font-size:18px;
-    filter: drop-shadow(0 0 8px rgba(52,211,153,0.7));
-  }
-  .brand-name{
-    font-family: var(--font-display);
-    font-size: 19px;
-    letter-spacing: 0.14em;
-    font-weight: 600;
-    color: var(--text-hi);
-  }
-  .brand-name em{
-    font-style:normal;
-    color: var(--emerald-bright);
-  }
-  .region-readout{
-    pointer-events:auto;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    color: var(--text-low);
-    text-transform: uppercase;
-    display:flex; gap:16px;
-  }
-  .region-readout b{ color: var(--emerald); font-weight:600; }
-
-  /* ---------- SIDEBAR (stats) ---------- */
-  .sidebar{
-    position:absolute; top:0; left:0; bottom:0;
-    width: 268px;
-    padding: 84px 20px 20px;
-    background: linear-gradient(180deg, rgba(10,18,16,0.94), rgba(10,18,16,0.86));
-    border-right: 1px solid var(--line);
-    backdrop-filter: blur(14px);
-    z-index: 15;
-    display:flex; flex-direction:column; gap:22px;
-    overflow-y:auto;
-  }
-  .stat-block-title{
-    font-size:10px; letter-spacing:0.16em; text-transform:uppercase;
-    color: var(--text-low); font-weight:600; margin-bottom:10px;
-  }
-  .stat-grid{ display:flex; flex-direction:column; gap:12px; }
-  .stat-card{
-    border:1px solid var(--line); border-radius:10px;
-    padding: 12px 14px;
-    background: rgba(52,211,153,0.03);
-    position:relative; overflow:hidden;
-  }
-  .stat-card::before{
-    content:''; position:absolute; left:0; top:0; bottom:0; width:2px;
-    background: var(--emerald); opacity:0.6;
-  }
-  .stat-label{ font-size:10px; color:var(--text-low); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px;}
-  .stat-value{ font-family: var(--font-mono); font-size:20px; font-weight:600; color:var(--text-hi); }
-  .stat-value.accent{ color: var(--emerald-bright); }
-  .stat-value.gold{ color: var(--gold); }
-  .stat-delta{ font-size:10.5px; color:var(--emerald); margin-top:3px; font-family:var(--font-mono); }
-
-  .legend{ display:flex; flex-direction:column; gap:8px; }
-  .legend-row{ display:flex; align-items:center; gap:9px; font-size:12px; color:var(--text-mid); }
-  .legend-swatch{ width:11px; height:11px; border-radius:3px; flex-shrink:0; }
-
-  .search-box{
-    position:relative;
-  }
-  .search-box input{
-    width:100%; background: rgba(0,0,0,0.3); border:1px solid var(--line);
-    border-radius:8px; padding:9px 12px; color:var(--text-hi); font-size:12.5px;
-    font-family: var(--font-body); outline:none;
-  }
-  .search-box input:focus{ border-color: var(--line-strong); }
-  .search-box input::placeholder{ color: var(--text-low); }
-
-  .region-list{ display:flex; flex-direction:column; gap:2px; }
-  .region-item{
-    display:flex; justify-content:space-between; align-items:center;
-    padding:8px 10px; border-radius:7px; cursor:pointer;
-    font-size:12px; color:var(--text-mid);
-    transition: background 0.15s;
-  }
-  .region-item:hover{ background: rgba(52,211,153,0.08); color:var(--text-hi); }
-  .region-item .count{ font-family:var(--font-mono); color:var(--text-low); font-size:11px; }
-
-  .footer-hint{
-    margin-top:auto; font-size:10.5px; color: var(--text-low); line-height:1.6;
-    padding-top:14px; border-top:1px solid var(--line);
-  }
-  .footer-hint kbd{
-    background: rgba(255,255,255,0.06); border:1px solid var(--line);
-    border-radius:4px; padding:1px 5px; font-family:var(--font-mono); font-size:10px;
-  }
-
-  /* ---------- GOD MODE TOGGLE (discret, bas gauche) ---------- */
-  .godmode-toggle{
-    position:absolute; left:20px; bottom:20px;
-    z-index: 25;
-    display:flex; align-items:center; gap:9px;
-    padding: 9px 12px 9px 10px;
-    border-radius: 10px;
-    border:1px solid var(--line);
-    background: rgba(10,18,16,0.9);
-    backdrop-filter: blur(10px);
-    cursor:pointer;
-    user-select:none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-  .godmode-toggle:hover{ border-color: var(--line-strong); }
-  .godmode-toggle.active{
-    border-color: rgba(182,255,92,0.5);
-    box-shadow: 0 0 22px rgba(182,255,92,0.15);
-  }
-  .gm-dot{
-    width:8px; height:8px; border-radius:50%;
-    background: var(--text-low);
-    transition: background 0.2s, box-shadow 0.2s;
-  }
-  .godmode-toggle.active .gm-dot{
-    background: var(--neon);
-    box-shadow: 0 0 8px var(--neon);
-  }
-  .gm-label{ font-size:11px; letter-spacing:0.06em; color:var(--text-mid); font-family: var(--font-mono);}
-  .godmode-toggle.active .gm-label{ color: var(--neon); }
-
-  /* ---------- DETAIL PANEL (overlay droite) ---------- */
-  .detail-panel{
-    position:absolute; top:0; right:0; bottom:0;
-    width: 380px;
-    background: linear-gradient(180deg, rgba(10,18,16,0.97), rgba(8,14,12,0.98));
-    border-left: 1px solid var(--line);
-    backdrop-filter: blur(16px);
-    z-index: 30;
-    transform: translateX(100%);
-    transition: transform 0.32s cubic-bezier(.19,1,.22,1);
-    overflow-y:auto;
-    padding-bottom: 30px;
-  }
-  .detail-panel.open{ transform: translateX(0); }
-
-  .detail-hero{
-    position:relative;
-    height: 210px;
-    display:flex; align-items:center; justify-content:center;
-    background:
-      radial-gradient(ellipse at center, rgba(52,211,153,0.16), transparent 70%);
-    border-bottom: 1px solid var(--line);
-    overflow:hidden;
-  }
-  .detail-hero .rarity-band{
-    position:absolute; top:0; left:0; right:0; height:3px;
-  }
-  .detail-hero-icon{
-    font-size: 88px;
-    filter: drop-shadow(0 0 30px rgba(52,211,153,0.5));
-    animation: float 4.5s ease-in-out infinite;
-  }
-  @keyframes float{
-    0%,100%{ transform: translateY(0); }
-    50%{ transform: translateY(-8px); }
-  }
-  .detail-close{
-    position:absolute; top:14px; right:14px;
-    width:30px; height:30px; border-radius:50%;
-    background: rgba(0,0,0,0.35); border:1px solid var(--line);
-    display:flex; align-items:center; justify-content:center;
-    cursor:pointer; color:var(--text-mid); font-size:15px;
-    transition: all 0.15s;
-  }
-  .detail-close:hover{ color:var(--text-hi); border-color:var(--line-strong); }
-
-  .detail-body{ padding: 20px 22px; }
-  .detail-tag{
-    display:inline-block; font-size:10px; letter-spacing:0.1em; text-transform:uppercase;
-    padding:3px 9px; border-radius:20px; font-weight:600; margin-bottom:10px;
-  }
-  .detail-title{
-    font-family: var(--font-display);
-    font-size: 23px; font-weight:600; color:var(--text-hi);
-    margin-bottom:4px; line-height:1.2;
-  }
-  .detail-region{ font-size:12px; color:var(--text-low); margin-bottom:18px; }
-
-  .detail-owner-row{
-    display:flex; align-items:center; gap:9px;
-    padding: 10px 12px; border-radius:9px;
-    background: rgba(255,255,255,0.02); border:1px solid var(--line);
-    margin-bottom:18px; font-size:12.5px;
-  }
-  .owner-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-
-  .detail-stats-grid{
-    display:grid; grid-template-columns: 1fr 1fr; gap:10px;
-    margin-bottom:18px;
-  }
-  .dstat{
-    border:1px solid var(--line); border-radius:9px; padding:11px 12px;
-    background: rgba(52,211,153,0.025);
-  }
-  .dstat-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-low); margin-bottom:5px;}
-  .dstat-value{ font-family:var(--font-mono); font-size:15px; color:var(--text-hi); font-weight:600; }
-  .dstat-value.mono-small{ font-size:12.5px; }
-
-  .detail-desc{
-    font-size:12.5px; line-height:1.7; color:var(--text-mid);
-    margin-bottom: 20px;
-    padding-bottom:20px;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .buy-btn{
-    width:100%; padding:14px; border-radius:10px; border:none;
-    font-family: var(--font-mono); font-size:13px; font-weight:700; letter-spacing:0.04em;
-    cursor:pointer; margin-bottom: 22px;
-    transition: transform 0.12s, box-shadow 0.2s;
-    text-transform: uppercase;
-  }
-  .buy-btn:active{ transform: scale(0.98); }
-  .buy-btn.claim{
-    background: linear-gradient(135deg, var(--neon), var(--emerald));
-    color: #06120b;
-    box-shadow: 0 0 26px rgba(182,255,92,0.25);
-  }
-  .buy-btn.claim:hover{ box-shadow: 0 0 34px rgba(182,255,92,0.4); }
-  .buy-btn.locked{
-    background: rgba(255,255,255,0.04); color: var(--text-low);
-    border: 1px solid var(--line); cursor:not-allowed;
-  }
-  .buy-btn.mine{
-    background: rgba(52,211,153,0.1); color: var(--emerald-bright);
-    border: 1px solid var(--line-strong); cursor:default;
-  }
-
-  .neighbors-title{
-    font-size:10px; text-transform:uppercase; letter-spacing:0.12em;
-    color:var(--text-low); margin-bottom:12px; font-weight:600;
-    display:flex; justify-content:space-between; align-items:center;
-  }
-  .neighbors-grid{
-    display:grid; grid-template-columns: repeat(3, 1fr); gap:9px;
-  }
-  .neighbor-cell{
-    aspect-ratio: 1; border-radius:9px; border:1px solid var(--line);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:4px; cursor:pointer; transition: all 0.15s; position:relative;
-    background: rgba(255,255,255,0.015);
-  }
-  .neighbor-cell:hover{ border-color: var(--line-strong); background: rgba(52,211,153,0.06); transform: translateY(-2px); }
-  .neighbor-cell .n-icon{ font-size:20px; }
-  .neighbor-cell .n-status{
-    position:absolute; top:5px; right:5px; width:6px; height:6px; border-radius:50%;
-  }
-  .neighbor-cell .n-price{ font-size:9px; font-family:var(--font-mono); color:var(--text-low); }
-  .neighbor-empty{
-    grid-column: 1 / -1; text-align:center; color:var(--text-low); font-size:11px; padding:14px;
-  }
-
-  /* ---------- TOAST ---------- */
-  .toast-wrap{
-    position:absolute; top:78px; left:50%; transform: translateX(-50%);
-    z-index: 60; display:flex; flex-direction:column; gap:8px; align-items:center;
-    pointer-events:none;
-  }
-  .toast{
-    background: rgba(10,18,16,0.95); border:1px solid var(--line-strong);
-    padding: 10px 18px; border-radius: 30px; font-size:12.5px;
-    display:flex; align-items:center; gap:8px; color:var(--text-hi);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-    animation: toastIn 0.28s cubic-bezier(.19,1,.22,1), toastOut 0.3s ease 2.2s forwards;
-    font-family: var(--font-mono);
-  }
-  @keyframes toastIn{ from{ opacity:0; transform: translateY(-10px);} to{opacity:1; transform:translateY(0);} }
-  @keyframes toastOut{ to{ opacity:0; transform: translateY(-8px); } }
-
-  /* ---------- ZOOM CONTROLS ---------- */
-  .zoom-controls{
-    position:absolute; right:20px; bottom:20px; z-index:25;
-    display:flex; flex-direction:column; gap:2px;
-    border:1px solid var(--line); border-radius:10px; overflow:hidden;
-    background: rgba(10,18,16,0.9); backdrop-filter: blur(10px);
-  }
-  .zoom-btn{
-    width:38px; height:38px; display:flex; align-items:center; justify-content:center;
-    color: var(--text-mid); font-size:17px; cursor:pointer; background:transparent; border:none;
-    transition: background 0.15s, color 0.15s;
-  }
-  .zoom-btn:hover{ background: rgba(52,211,153,0.1); color: var(--emerald-bright); }
-  .zoom-btn + .zoom-btn{ border-top: 1px solid var(--line); }
-
-  .minimap-scale{
-    position:absolute; right:20px; bottom:78px; z-index:25;
-    font-family: var(--font-mono); font-size:10px; color: var(--text-low);
-    background: rgba(10,18,16,0.75); padding:5px 10px; border-radius:6px;
-    border:1px solid var(--line);
-  }
-
-  ::-webkit-scrollbar{ width:6px; }
-  ::-webkit-scrollbar-track{ background:transparent; }
-  ::-webkit-scrollbar-thumb{ background: var(--line-strong); border-radius:3px; }
-
-  /* ---------- MENU TOGGLE (mobile) ---------- */
-  .menu-toggle{
-    display:none;
-    width:38px; height:38px; border-radius:9px;
-    border:1px solid var(--line);
-    background: rgba(10,18,16,0.85);
-    align-items:center; justify-content:center;
-    color: var(--text-hi); font-size:16px;
-    cursor:pointer; pointer-events:auto;
-    flex-shrink:0;
-  }
-  .sidebar-scrim{
-    display:none;
-    position:absolute; inset:0; z-index:14;
-    background: rgba(0,0,0,0.5);
-    backdrop-filter: blur(2px);
-  }
-  .sidebar-scrim.open{ display:block; }
-
-  @media (max-width: 860px){
-    .menu-toggle{ display:flex; }
-    .brand-name{ font-size:16px; }
-    .sidebar{
-      width: min(78vw, 300px);
-      padding: 78px 18px 18px;
-      transform: translateX(-100%);
-      transition: transform 0.28s cubic-bezier(.19,1,.22,1);
-      box-shadow: 20px 0 40px rgba(0,0,0,0.4);
-    }
-    .sidebar.open{ transform: translateX(0); }
-    .detail-panel{ width: 100%; }
-    .region-readout{ display:none; }
-    .godmode-toggle{ left: 14px; bottom: 14px; }
-    .zoom-controls{ right:14px; bottom:14px; }
-    .minimap-scale{ right:14px; bottom: 72px; font-size:9px; }
-  }
-</style>
-</head>
-<body>
-<div id="app">
-  <canvas id="mapCanvas"></canvas>
-  <div class="sidebar-scrim" id="sidebarScrim"></div>
-
-  <div class="topbar">
-    <div class="brand" style="pointer-events:auto;">
-      <div class="menu-toggle" id="menuToggle">☰</div>
-      <div class="brand-mark">🌲</div>
-      <div class="brand-name">CANO<em>PY</em></div>
-    </div>
-    <div class="region-readout" id="regionReadout">
-      <span>LAT <b id="roLat">—</b></span>
-      <span>LNG <b id="roLng">—</b></span>
-      <span>ZOOM <b id="roZoom">1.0×</b></span>
-    </div>
-  </div>
-
-  <aside class="sidebar" id="sidebar">
-    <div>
-      <div class="stat-block-title">Ma canopée</div>
-      <div class="stat-grid">
-        <div class="stat-card">
-          <div class="stat-label">Arbres possédés</div>
-          <div class="stat-value accent" id="statTrees">0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Valeur totale</div>
-          <div class="stat-value gold" id="statValue">$0</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Rendement / jour</div>
-          <div class="stat-value" id="statYield">$0.00</div>
-          <div class="stat-delta" id="statYieldPts">+0 pts éco</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Points éco cumulés</div>
-          <div class="stat-value accent" id="statPoints">0</div>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <div class="stat-block-title">Légende</div>
-      <div class="legend">
-        <div class="legend-row"><span class="legend-swatch" style="background:var(--owned)"></span> Vos parcelles</div>
-        <div class="legend-row"><span class="legend-swatch" style="background:var(--other)"></span> Autres explorateurs</div>
-        <div class="legend-row"><span class="legend-swatch" style="background:var(--free); border:1px solid var(--line-strong)"></span> Parcelles libres</div>
-      </div>
-    </div>
-
-    <div>
-      <div class="stat-block-title">Régions</div>
-      <div class="region-list" id="regionList"></div>
-    </div>
-
-    <div class="footer-hint">
-      <kbd>Glisser</kbd> pour naviguer · <kbd>Molette</kbd> pour zoomer<br>
-      Cliquez une parcelle pour l'inspecter.
-    </div>
-  </aside>
-
-  <div class="godmode-toggle" id="godToggle">
-    <div class="gm-dot"></div>
-    <div class="gm-label">GOD MODE</div>
-  </div>
-
-  <div class="zoom-controls">
-    <button class="zoom-btn" id="zoomIn">+</button>
-    <button class="zoom-btn" id="zoomOut">−</button>
-  </div>
-  <div class="minimap-scale" id="scaleReadout">1 parcelle ≈ 0.5 ha</div>
-
-  <div class="detail-panel" id="detailPanel"></div>
-
-  <div class="toast-wrap" id="toastWrap"></div>
-</div>
-
-<script>
-(function(){
-"use strict";
-
-/* ============================================================
-   1. DONNÉES — ESPÈCES, RARETÉS, RÉGIONS
-   ============================================================ */
-
-const RARITIES = {
-  common:    { label: "Commun",      color: "#6b8f7c", mult: 1,    glow: false },
-  uncommon:  { label: "Peu commun",  color: "#34d399", mult: 2.4,  glow: false },
-  rare:      { label: "Rare",        color: "#22c1e8", mult: 5.5,  glow: true  },
-  epic:      { label: "Épique",      color: "#c084fc", mult: 12,   glow: true  },
-  legendary: { label: "Légendaire",  color: "#e8c766", mult: 28,   glow: true  },
-};
-const RARITY_KEYS = Object.keys(RARITIES);
-const RARITY_WEIGHTS = [46, 30, 15, 7, 2]; // % approx pour commun->légendaire
-
-// Chaque région correspond à une véritable zone forestière du globe (bbox lng/lat approximative).
-// kind pilote le rendu vectoriel de l'arbre sur la carte (voir drawTree).
-const REGIONS = [
-  { key:"amazonia", name:"Bassin Amazonien", lngMin:-78, lngMax:-48, latMin:-14, latMax:5, color:"#0f2e1c",
-    species:[
-      {name:"Acajou d'Amazonie",   kind:"broadleaf", icon:"🌳", rarity:"rare",      canopy:["#1f6b3f","#2d8a52"]},
-      {name:"Kapokier Géant",      kind:"tall",       icon:"🌴", rarity:"epic",     canopy:["#1a5c38","#268a4f"]},
-      {name:"Palissandre du Pará", kind:"broadleaf",  icon:"🌲", rarity:"uncommon", canopy:["#215c33","#2f7d47"]},
-      {name:"Hévéa Sauvage",       kind:"broadleaf",  icon:"🌿", rarity:"common",   canopy:["#2a6b3e","#3a8c54"]},
-    ]},
-  { key:"africa", name:"Afrique Tropicale", lngMin:-15, lngMax:35, latMin:-6, latMax:17, color:"#2e2410",
-    species:[
-      {name:"Baobab Ancestral", kind:"baobab",    icon:"🌳", rarity:"legendary", canopy:["#5c8a3c","#79a852"], trunk:"#8a6a42"},
-      {name:"Iroko Sacré",      kind:"broadleaf", icon:"🌲", rarity:"epic",      canopy:["#245c2e","#357d42"]},
-      {name:"Acacia du Sahel",  kind:"umbrella",  icon:"🌵", rarity:"common",    canopy:["#6b8a3c","#8aa852"]},
-      {name:"Palmier Rônier",   kind:"palm",      icon:"🌴", rarity:"uncommon",  canopy:["#3d7d42","#54a058"]},
-    ]},
-  { key:"asia", name:"Asie du Sud-Est", lngMin:95, lngMax:120, latMin:-8, latMax:15, color:"#132e1e",
-    species:[
-      {name:"Banyan Sacré",     kind:"banyan",  icon:"🌳", rarity:"epic",     canopy:["#1f5c38","#2d8250"]},
-      {name:"Teck de Birmanie", kind:"broadleaf", icon:"🌲", rarity:"rare",   canopy:["#215c33","#317d47"]},
-      {name:"Bambou Géant",     kind:"bamboo",  icon:"🎋", rarity:"common",   canopy:["#4a8a3c","#63a852"]},
-      {name:"Bois de Fer",      kind:"broadleaf", icon:"🌴", rarity:"uncommon", canopy:["#1c4d2c","#2a6b3e"]},
-    ]},
-  { key:"japan", name:"Japon", lngMin:130, lngMax:145, latMin:30, latMax:45, color:"#2e1626",
-    species:[
-      {name:"Cerisier Sakura",   kind:"blossom", icon:"🌸", rarity:"rare",      canopy:["#f4a6c8","#ffc9e0"]},
-      {name:"Érable Momiji",     kind:"blossom", icon:"🍁", rarity:"uncommon",  canopy:["#d9542f","#f0793f"]},
-      {name:"Pin Noir du Japon", kind:"conifer", icon:"🌲", rarity:"common",    canopy:["#1e4a30","#2c6b44"]},
-      {name:"Ginkgo Millénaire", kind:"blossom", icon:"🍃", rarity:"legendary", canopy:["#e0b83c","#f2d466"]},
-    ]},
-  { key:"siberia", name:"Taïga Sibérienne", lngMin:60, lngMax:150, latMin:50, latMax:68, color:"#101f2e",
-    species:[
-      {name:"Mélèze de Sibérie", kind:"conifer", icon:"🌲", rarity:"common",   canopy:["#1c4d38","#296b4d"]},
-      {name:"Pin Sibérien",      kind:"conifer", icon:"🌲", rarity:"uncommon", canopy:["#173d2e","#235c44"]},
-      {name:"Bouleau Blanc",     kind:"birch",   icon:"🌳", rarity:"common",   canopy:["#3d6b3c","#548a52"], trunk:"#d8dcd2"},
-      {name:"Cèdre de Sibérie",  kind:"conifer", icon:"🌲", rarity:"rare",     canopy:["#164036","#215c4d"]},
-    ]},
-  { key:"namerica", name:"Amérique du Nord", lngMin:-140, lngMax:-60, latMin:35, latMax:60, color:"#182e10",
-    species:[
-      {name:"Séquoia Géant",    kind:"tall",     icon:"🌲", rarity:"legendary", canopy:["#1c4d30","#2c6b44"]},
-      {name:"Pin Bristlecone",  kind:"conifer",  icon:"🌲", rarity:"epic",      canopy:["#3d4d2e","#5c6b44"]},
-      {name:"Chêne Rouge",      kind:"broadleaf", icon:"🌳", rarity:"uncommon", canopy:["#7d3a2f","#a85440"]},
-      {name:"Érable à Sucre",   kind:"blossom",  icon:"🍁", rarity:"common",    canopy:["#c9782f","#e89a42"]},
-    ]},
-  { key:"europe", name:"Forêts d'Europe", lngMin:-8, lngMax:35, latMin:43, latMax:65, color:"#1c2e14",
-    species:[
-      {name:"Chêne Millénaire",   kind:"broadleaf", icon:"🌳", rarity:"epic",     canopy:["#2a5c2e","#3d7d42"]},
-      {name:"If Sacré",           kind:"conifer",   icon:"🌲", rarity:"rare",     canopy:["#123626","#1e4d38"]},
-      {name:"Hêtre des Carpates", kind:"broadleaf", icon:"🌳", rarity:"uncommon", canopy:["#33602f","#478042"]},
-      {name:"Peuplier d'Italie",  kind:"poplar",    icon:"🌴", rarity:"common",   canopy:["#3d6b3c","#548a52"]},
-    ]},
-  { key:"oceania", name:"Océanie", lngMin:113, lngMax:178, latMin:-45, latMax:-10, color:"#122e28",
-    species:[
-      {name:"Eucalyptus Roi",   kind:"poplar",  icon:"🌳", rarity:"rare",      canopy:["#4a7d5c","#68a078"]},
-      {name:"Kauri Millénaire", kind:"tall",    icon:"🌲", rarity:"legendary", canopy:["#1c4d3c","#2c6b54"]},
-      {name:"Banksia Côtière",  kind:"shrub",   icon:"🌿", rarity:"common",    canopy:["#5c7d3c","#7d9e52"]},
-      {name:"Araucaria Ancien", kind:"conifer", icon:"🌲", rarity:"epic",      canopy:["#173d30","#235c46"]},
-    ]},
-];
-
-// Silhouettes continentales très simplifiées (points [lng, lat]) — juste assez pour situer les régions
-// dans un planisphère reconnaissable ; ce ne sont pas des tracés cartographiques exacts.
-const CONTINENTS = [
-  { name:"Amérique du Nord", pts:[[-168,66],[-155,71],[-125,70],[-95,68],[-80,62],[-65,50],[-55,48],
-      [-60,45],[-70,42],[-75,35],[-81,25],[-97,26],[-97,18],[-105,20],[-115,30],[-124,40],[-124,49],[-130,55],[-145,60],[-168,66]] },
-  { name:"Amérique du Sud", pts:[[-79,9],[-77,1],[-70,-4],[-70,-18],[-63,-22],[-58,-34],[-62,-40],
-      [-68,-52],[-72,-52],[-70,-40],[-71,-18],[-77,-6],[-81,2],[-79,9]] },
-  { name:"Afrique", pts:[[-17,15],[-16,7],[-10,5],[3,6],[9,4],[9,-3],[13,-6],[12,-17],[16,-28],
-      [26,-34],[32,-27],[33,-18],[40,-16],[43,-3],[41,6],[45,11],[38,15],[32,22],[25,31],[10,32],
-      [-6,35],[-10,29],[-17,15]] },
-  { name:"Europe", pts:[[-9,38],[-9,43],[-5,48],[2,51],[5,53],[11,54],[18,55],[24,60],[30,60],
-      [28,53],[24,49],[26,44],[19,42],[13,42],[9,44],[3,43],[-2,37],[-9,38]] },
-  { name:"Asie", pts:[[26,44],[35,45],[45,48],[55,52],[65,55],[75,58],[90,62],[105,62],[120,60],
-      [135,55],[142,46],[140,36],[130,33],[122,30],[110,22],[103,10],[97,6],[92,15],[80,20],
-      [70,24],[62,25],[52,26],[45,27],[35,37],[26,44]] },
-  { name:"Australie", pts:[[113,-22],[115,-33],[122,-34],[131,-32],[137,-35],[141,-38],[147,-38],
-      [150,-33],[153,-27],[145,-17],[142,-11],[133,-12],[128,-15],[122,-18],[113,-22]] },
-];
-
-const OWNER_NAMES = ["EcoVentures_Fund","GreenRoot_88","TerraNova.eth","CanopyBaron","Silvicole_Prime",
-  "RainforestDAO","VerdantCapital","OakAndOre","BioReserve_Zed","Arborly_Invest"];
-
-/* ============================================================
-   2. GÉOMÉTRIE HEXAGONALE + PROJECTION GÉOGRAPHIQUE
-   ============================================================
-   La grille hexagonale (q,r) est projetée sur un planisphère réel :
-   chaque colonne/ligne correspond à une tranche de longitude/latitude.
-   Les parcelles ne sont générées que dans les zones forestières réelles
-   définies par REGIONS (bbox lng/lat), avec une bordure organique.
-*/
-
-const HEX_SIZE = 15;        // rayon de base en px (avant zoom)
-const GRID_COLS = 92;       // couvre -180° à +180°
-const GRID_ROWS = 34;       // couvre +78° à -62° de latitude
-const LNG_MIN = -180, LNG_MAX = 180;
-const LAT_MAX = 78, LAT_MIN = -62;
-
-function hexToPixel(q, r){
-  const w = HEX_SIZE * 1.5;
-  const h = HEX_SIZE * Math.sqrt(3);
-  const x = w * q;
-  const y = h * (r + (q % 2 !== 0 ? 0.5 : 0));
-  return { x, y };
-}
-
-// Projection continue lng/lat <-> pixel monde, alignée sur le même repère que hexToPixel
-function lngLatToPixel(lng, lat){
-  const q = (lng - LNG_MIN) / (LNG_MAX - LNG_MIN) * GRID_COLS;
-  const r = (LAT_MAX - lat) / (LAT_MAX - LAT_MIN) * GRID_ROWS;
-  return { x: HEX_SIZE*1.5*q, y: HEX_SIZE*Math.sqrt(3)*r };
-}
-function qrToLngLat(q, r){
-  const lng = LNG_MIN + (q / GRID_COLS) * (LNG_MAX - LNG_MIN);
-  const lat = LAT_MAX - (r / GRID_ROWS) * (LAT_MAX - LAT_MIN);
-  return { lng, lat };
-}
-function pixelToLngLat(x, y){
-  const q = x / (HEX_SIZE*1.5);
-  const r = y / (HEX_SIZE*Math.sqrt(3));
-  return qrToLngLat(q, r);
-}
-
-function seededRandom(seed){
-  let s = seed % 2147483647;
-  if (s <= 0) s += 2147483646;
-  return function(){
-    s = (s * 16807) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}
-
-function pickRarity(rand){
-  const r = rand() * 100;
-  let acc = 0;
-  for(let i=0;i<RARITY_KEYS.length;i++){
-    acc += RARITY_WEIGHTS[i];
-    if (r <= acc) return RARITY_KEYS[i];
-  }
-  return "common";
-}
-
-function regionAt(lng, lat){
-  for (const region of REGIONS){
-    if (lng >= region.lngMin && lng <= region.lngMax && lat >= region.latMin && lat <= region.latMax){
-      return region;
-    }
-  }
-  return null;
-}
-
-/* ============================================================
-   3. GÉNÉRATION DU MONDE
-   ============================================================ */
-
-const world = new Map(); // key "q,r" -> parcel object
-const rand = seededRandom(918273);
-const FEATHER_DEG = 3.5; // largeur de la bordure organique de forêt
-
-let uidCounter = 1;
-for(let q=0; q<GRID_COLS; q++){
-  for(let r=0; r<GRID_ROWS; r++){
-    const { lng, lat } = qrToLngLat(q, r);
-    const region = regionAt(lng, lat);
-    if (!region) continue; // hors des zones forestières réelles => pas de parcelle
-
-    // bordure organique : moins de densité près des limites de la région + bruit interne (clairières)
-    const distEdge = Math.min(lng-region.lngMin, region.lngMax-lng, lat-region.latMin, region.latMax-lat);
-    const edgeT = Math.min(1, Math.max(0, distEdge / FEATHER_DEG));
-    const glade = Math.sin(q*0.31 + r*0.27) * Math.cos(r*0.19 - q*0.11);
-    const density = edgeT * 0.85 + 0.15;
-    if (rand() > density || glade < -0.62) continue;
-
-    const species = region.species[Math.floor(rand()*region.species.length)];
-    const rarity = rand() < 0.65 ? species.rarity : pickRarity(rand); // biaisé vers la rareté typique de l'espèce
-    const rarityInfo = RARITIES[rarity];
-    const basePrice = 40 * rarityInfo.mult;
-    const price = Math.round(basePrice * (0.7 + rand()*0.9));
-    const dailyYield = +(price * 0.0026 * (0.8+rand()*0.5)).toFixed(3);
-
-    let owner = "free";
-    let ownerName = null;
-    const ownRoll = rand();
-    if (ownRoll < 0.22){ owner = "other"; ownerName = OWNER_NAMES[Math.floor(rand()*OWNER_NAMES.length)]; }
-
-    world.set(q+","+r, {
-      id: "PLC-" + String(uidCounter++).padStart(5,"0"),
-      q, r,
-      region: region.key,
-      regionName: region.name,
-      name: species.name,
-      icon: species.icon,
-      kind: species.kind,
-      canopy: species.canopy,
-      trunkColor: species.trunk || "#5c4632",
-      rarity,
-      price,
-      dailyYield,
-      owner,        // "free" | "me" | "other"
-      ownerName,
-      lat: lat.toFixed(4), lng: lng.toFixed(4),
-    });
-  }
-}
-
-/* ============================================================
-   4. ÉTAT GLOBAL / CAMÉRA
-   ============================================================ */
-
-const canvas = document.getElementById('mapCanvas');
-const ctx = canvas.getContext('2d');
-
-let camera = { x: 0, y: 0, zoom: 1 };
-let dragging = false, dragStart = null, cameraStart = null, dragMoved = false;
-let selectedKey = null;
-let godMode = false;
-
-const state = {
-  points: 0,
-};
-
-function resize(){
-  canvas.width = window.innerWidth * devicePixelRatio;
-  canvas.height = window.innerHeight * devicePixelRatio;
-  canvas.style.width = window.innerWidth + "px";
-  canvas.style.height = window.innerHeight + "px";
-  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
-}
-window.addEventListener('resize', resize);
-resize();
-
-// vue mondiale au démarrage, légèrement centrée sur l'hémisphère nord (plus de forêts)
-(function initCamera(){
-  const p = lngLatToPixel(15, 15);
-  camera.x = -p.x;
-  camera.y = -p.y;
-  camera.zoom = window.innerWidth < 860 ? 0.85 : 1.5;
-})();
-
-/* ============================================================
-   5. RENDU CANVAS
-   ============================================================ */
-
-function worldToScreen(x, y){
-  const w = window.innerWidth, h = window.innerHeight;
-  return {
-    x: w/2 + (x + camera.x) * camera.zoom,
-    y: h/2 + (y + camera.y) * camera.zoom,
-  };
-}
-function screenToWorld(sx, sy){
-  const w = window.innerWidth, h = window.innerHeight;
-  return {
-    x: (sx - w/2)/camera.zoom - camera.x,
-    y: (sy - h/2)/camera.zoom - camera.y,
-  };
-}
-
-function hexCorners(cx, cy, size){
-  const pts = [];
-  for(let i=0;i<6;i++){
-    const angle = Math.PI/180 * (60*i);
-    pts.push([ cx + size*Math.cos(angle), cy + size*Math.sin(angle) ]);
-  }
-  return pts;
-}
-
-function drawHex(cx, cy, size, fill, stroke, lineWidth){
-  const pts = hexCorners(cx, cy, size);
-  ctx.beginPath();
-  ctx.moveTo(pts[0][0], pts[0][1]);
-  for(let i=1;i<6;i++) ctx.lineTo(pts[i][0], pts[i][1]);
-  ctx.closePath();
-  if (fill){ ctx.fillStyle = fill; ctx.fill(); }
-  if (stroke){ ctx.strokeStyle = stroke; ctx.lineWidth = lineWidth||1; ctx.stroke(); }
-}
-
-let hoveredKey = null;
-
-/* ---- Fond planisphère : silhouettes continentales + graticule ---- */
-function drawWorldBackdrop(w, h){
-  // graticule (méridiens/parallèles tous les 20°)
-  ctx.strokeStyle = "rgba(52,211,153,0.05)";
-  ctx.lineWidth = 1;
-  for (let lng=-180; lng<=180; lng+=20){
-    const a = worldToScreen(lngLatToPixel(lng, LAT_MAX).x, lngLatToPixel(lng, LAT_MAX).y);
-    const b = worldToScreen(lngLatToPixel(lng, LAT_MIN).x, lngLatToPixel(lng, LAT_MIN).y);
-    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
-  }
-  for (let lat=-60; lat<=80; lat+=20){
-    const a = worldToScreen(lngLatToPixel(LNG_MIN, lat).x, lngLatToPixel(LNG_MIN, lat).y);
-    const b = worldToScreen(lngLatToPixel(LNG_MAX, lat).x, lngLatToPixel(LNG_MAX, lat).y);
-    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
-  }
-  // équateur, un peu plus marqué
-  const eqA = worldToScreen(lngLatToPixel(LNG_MIN,0).x, lngLatToPixel(LNG_MIN,0).y);
-  const eqB = worldToScreen(lngLatToPixel(LNG_MAX,0).x, lngLatToPixel(LNG_MAX,0).y);
-  ctx.strokeStyle = "rgba(52,211,153,0.09)";
-  ctx.beginPath(); ctx.moveTo(eqA.x,eqA.y); ctx.lineTo(eqB.x,eqB.y); ctx.stroke();
-
-  // silhouettes des continents
-  ctx.fillStyle = "rgba(52,211,153,0.045)";
-  ctx.strokeStyle = "rgba(52,211,153,0.14)";
-  ctx.lineWidth = 1;
-  CONTINENTS.forEach(cont => {
-    ctx.beginPath();
-    cont.pts.forEach(([lng,lat], i) => {
-      const p = lngLatToPixel(lng, lat);
-      const s = worldToScreen(p.x, p.y);
-      if (i===0) ctx.moveTo(s.x, s.y); else ctx.lineTo(s.x, s.y);
-    });
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  });
-}
-
-/* ---- Rendu vectoriel "réaliste" des arbres (remplace les emojis plats) ---- */
-function circle(cx, cy, r){ ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill(); }
-
-function drawTree(cx, cy, size, p){
-  const [cA, cB] = p.canopy || ["#2a6b3e", "#3a8c54"];
-  const trunkColor = p.trunkColor || "#5c4632";
-  const kind = p.kind || "broadleaf";
-  const s = size; // échelle locale
-
-  ctx.save();
-  ctx.translate(cx, cy);
-
-  // ombre portée douce
-  ctx.beginPath();
-  ctx.ellipse(0, s*0.62, s*0.5, s*0.14, 0, 0, Math.PI*2);
-  ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.fill();
-
-  switch(kind){
-    case "conifer": {
-      ctx.fillStyle = trunkColor;
-      ctx.fillRect(-s*0.05, s*0.18, s*0.1, s*0.32);
-      const layers = 3;
-      for(let i=0;i<layers;i++){
-        const ly = s*0.35 - i*s*0.28;
-        const lw = s*(0.52 - i*0.1);
-        ctx.beginPath();
-        ctx.moveTo(0, ly - s*0.34);
-        ctx.lineTo(-lw, ly);
-        ctx.lineTo(lw, ly);
-        ctx.closePath();
-        ctx.fillStyle = i%2===0 ? cA : cB;
-        ctx.fill();
-      }
-      break;
-    }
-    case "baobab": {
-      ctx.fillStyle = trunkColor;
-      ctx.beginPath();
-      ctx.ellipse(0, s*0.18, s*0.26, s*0.4, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = cA;
-      for(let i=0;i<4;i++){
-        const ang = -Math.PI/2 + (i-1.5)*0.5;
-        circle(Math.cos(ang)*s*0.22, -s*0.32 + Math.sin(ang)*s*0.14, s*0.17);
-      }
-      ctx.fillStyle = cB;
-      circle(0, -s*0.4, s*0.19);
-      break;
-    }
-    case "banyan": {
-      ctx.fillStyle = trunkColor;
-      ctx.fillRect(-s*0.07, s*0.05, s*0.14, s*0.4);
-      ctx.fillStyle = cA;
-      ctx.beginPath();
-      ctx.ellipse(0, -s*0.12, s*0.58, s*0.28, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.strokeStyle = trunkColor; ctx.lineWidth = Math.max(0.6, s*0.03);
-      for(let i=-2;i<=2;i++){
-        ctx.beginPath();
-        ctx.moveTo(i*s*0.18, -s*0.05);
-        ctx.lineTo(i*s*0.14, s*0.32);
-        ctx.stroke();
-      }
-      ctx.fillStyle = cB;
-      circle(0, -s*0.22, s*0.24);
-      break;
-    }
-    case "palm": {
-      ctx.strokeStyle = trunkColor; ctx.lineWidth = Math.max(1, s*0.08);
-      ctx.beginPath();
-      ctx.moveTo(0, s*0.45);
-      ctx.quadraticCurveTo(s*0.08, s*0.1, s*0.02, -s*0.18);
-      ctx.stroke();
-      ctx.strokeStyle = cA; ctx.lineWidth = Math.max(1, s*0.06);
-      for(let i=0;i<6;i++){
-        const ang = -Math.PI/2 + (i - 2.5) * 0.42;
-        ctx.beginPath();
-        ctx.moveTo(s*0.02, -s*0.18);
-        ctx.quadraticCurveTo(
-          s*0.02 + Math.cos(ang)*s*0.22, -s*0.18 + Math.sin(ang)*s*0.14,
-          s*0.02 + Math.cos(ang)*s*0.4, -s*0.18 + Math.sin(ang)*s*0.32
-        );
-        ctx.stroke();
-      }
-      break;
-    }
-    case "bamboo": {
-      ctx.strokeStyle = cA; ctx.lineWidth = Math.max(1, s*0.06);
-      for(let i=-1;i<=1;i++){
-        const h0 = s*0.42, xoff = i*s*0.16;
-        ctx.beginPath();
-        ctx.moveTo(xoff, s*0.45);
-        ctx.lineTo(xoff - i*s*0.04, -h0);
-        ctx.stroke();
-        for(let n=1;n<4;n++){
-          const ny = s*0.45 - n*(s*0.87/4);
-          ctx.beginPath();
-          ctx.moveTo(xoff - s*0.05, ny);
-          ctx.lineTo(xoff + s*0.05, ny);
-          ctx.strokeStyle = cB; ctx.lineWidth = Math.max(0.6, s*0.03);
-          ctx.stroke();
-          ctx.strokeStyle = cA; ctx.lineWidth = Math.max(1, s*0.06);
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CANOPÉE — Adoptez un arbre, changez le monde</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-      }
-      ctx.fillStyle = cB;
-      circle(0, -s*0.42, s*0.1);
-      break;
-    }
-    case "blossom": {
-      ctx.fillStyle = trunkColor;
-      ctx.fillRect(-s*0.05, s*0.1, s*0.1, s*0.36);
-      ctx.fillStyle = cA;
-      [[0,-s*0.28,s*0.3],[-s*0.22,-s*0.14,s*0.2],[s*0.22,-s*0.14,s*0.2]].forEach(([dx,dy,r]) => circle(dx,dy,r));
-      ctx.fillStyle = "rgba(255,255,255,0.55)";
-      for(let i=0;i<7;i++){
-        const ang = rand2(cx+i,cy)*Math.PI*2;
-        const rad = rand2(cx,cy+i)*s*0.3;
-        circle(Math.cos(ang)*rad, -s*0.24 + Math.sin(ang)*rad*0.6, s*0.028);
-      }
-      break;
-    }
-    case "umbrella": {
-      ctx.strokeStyle = trunkColor; ctx.lineWidth = Math.max(1, s*0.07);
-      ctx.beginPath(); ctx.moveTo(0, s*0.45); ctx.lineTo(0, -s*0.05); ctx.stroke();
-      ctx.fillStyle = cA;
-      ctx.beginPath();
-      ctx.ellipse(0, -s*0.12, s*0.5, s*0.13, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = cB;
-      ctx.beginPath();
-      ctx.ellipse(0, -s*0.17, s*0.34, s*0.09, 0, 0, Math.PI*2);
-      ctx.fill();
-      break;
-    }
-    case "poplar": case "tall": {
-      const trunkH = kind === "tall" ? s*0.62 : s*0.5;
-      ctx.fillStyle = trunkColor;
-      ctx.fillRect(-s*0.045, s*0.42-trunkH, s*0.09, trunkH);
-      ctx.fillStyle = cA;
-      ctx.beginPath();
-      ctx.ellipse(0, s*0.42-trunkH-s*0.14, s*0.16, s*0.24, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = cB;
-      ctx.beginPath();
-      ctx.ellipse(0, s*0.42-trunkH-s*0.02, s*0.13, s*0.16, 0, 0, Math.PI*2);
-      ctx.fill();
-      break;
-    }
-    case "birch": {
-      ctx.fillStyle = trunkColor;
-      ctx.fillRect(-s*0.045, s*0.05, s*0.09, s*0.4);
-      ctx.strokeStyle = "#33362f"; ctx.lineWidth = Math.max(0.5, s*0.025);
-      for(let i=0;i<3;i++){
-        ctx.beginPath();
-        ctx.moveTo(-s*0.045, s*0.14+i*s*0.11);
-        ctx.lineTo(s*0.045, s*0.11+i*s*0.11);
-        ctx.stroke();
-      }
-      ctx.fillStyle = cA;
-      [[0,-s*0.18,s*0.26],[-s*0.16,-s*0.05,s*0.16],[s*0.16,-s*0.05,s*0.16]].forEach(([dx,dy,r]) => circle(dx,dy,r));
-      break;
-    }
-    case "shrub": {
-      ctx.fillStyle = cA;
-      [[0,s*0.1,s*0.24],[-s*0.14,s*0.16,s*0.15],[s*0.14,s*0.16,s*0.15]].forEach(([dx,dy,r]) => circle(dx,dy,r));
-      break;
-    }
-    default: { // broadleaf
-      ctx.fillStyle = trunkColor;
-      ctx.fillRect(-s*0.055, s*0.08, s*0.11, s*0.38);
-      ctx.fillStyle = cA;
-      [[0,-s*0.22,s*0.3],[-s*0.2,-s*0.08,s*0.2],[s*0.2,-s*0.08,s*0.2],[0,-s*0.05,s*0.22]].forEach(([dx,dy,r]) => circle(dx,dy,r));
-      ctx.fillStyle = cB;
-      circle(-s*0.06, -s*0.26, s*0.13);
-    }
-  }
-  ctx.restore();
-}
-function rand2(a,b){ const x = Math.sin(a*127.1+b*311.7)*43758.5453; return x - Math.floor(x); }
 
-function render(){
-  const w = window.innerWidth, h = window.innerHeight;
-  ctx.clearRect(0,0,w,h);
-  drawWorldBackdrop(w, h);
+        :root {
+            --paper: #EEF2E8;
+            --paper-dark: #D5DDCE;
+            --ink: #1C3229;
+            --ink-soft: #4C6157;
+            --ink-faint: #8A9C92;
+            --canopy: #2F6E4E;
+            --canopy-light: #4CAF7A;
+            --canopy-bright: #3E9268;
+            --sun: #D9A441;
+            --sun-light: #F5D98A;
+            --sky: #C7E2E6;
+            --sky-deep: #A9CDD3;
+            --ocean: #B5D8E0;
+            --card: #FFFFFF;
+            --line: rgba(28, 50, 41, 0.14);
+            --line-strong: rgba(28, 50, 41, 0.30);
+            --shadow: rgba(28, 50, 41, 0.15);
+            --danger: #B8483F;
+            --gold: #C9A84C;
+            --font-display: 'Fraunces', Georgia, serif;
+            --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'IBM Plex Mono', 'SF Mono', monospace;
+        }
 
-  const size = HEX_SIZE * camera.zoom * 0.98;
-  const showTrees = camera.zoom > 0.55;
-  const showLabels = camera.zoom > 1.6;
-  const showPrices = camera.zoom > 2.4;
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            background: var(--paper);
+            color: var(--ink);
+            font-family: var(--font-body);
+            -webkit-font-smoothing: antialiased;
+            user-select: none;
+        }
 
-  // culling: ne dessiner que les hex visibles
-  const margin = size * 3;
+        #app {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-  world.forEach((p, key) => {
-    const { x, y } = hexToPixel(p.q, p.r);
-    const s = worldToScreen(x, y);
-    if (s.x < -margin || s.x > w+margin || s.y < -margin || s.y > h+margin) return;
+        /* ===== MAP ===== */
+        #mapViewport {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            background: linear-gradient(180deg, var(--sky) 0%, var(--ocean) 100%);
+            cursor: grab;
+            touch-action: none;
+        }
 
-    const rarityInfo = RARITIES[p.rarity];
-    let fill, stroke, lw = 1;
+        #mapViewport.dragging {
+            cursor: grabbing;
+        }
 
-    if (p.owner === "me"){
-      fill = "rgba(52,211,153,0.22)"; stroke = "#34d399"; lw = 1.6;
-    } else if (p.owner === "other"){
-      fill = "rgba(107,122,148,0.12)"; stroke = "rgba(107,122,148,0.5)";
-    } else {
-      fill = "rgba(255,255,255,0.015)"; stroke = "rgba(52,211,153,0.14)";
-    }
+        #mapWorld {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: 0 0;
+            transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
 
-    if (key === selectedKey){ stroke = "#b6ff5c"; lw = 2.4; }
-    else if (key === hoveredKey){ stroke = rarityInfo.color; lw = 2; }
+        #mapWorld.panning {
+            transition: none;
+        }
 
-    drawHex(s.x, s.y, size, fill, stroke, lw);
+        .ocean-waves {
+            position: absolute;
+            inset: 0;
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(255,255,255,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 30%, rgba(255,255,255,0.05) 0%, transparent 50%);
+            pointer-events: none;
+        }
 
-    // pastille de rareté (coin)
-    if (size > 6){
-      ctx.beginPath();
-      ctx.arc(s.x + size*0.62, s.y - size*0.5, Math.max(1.8, size*0.09), 0, Math.PI*2);
-      ctx.fillStyle = rarityInfo.color;
-      if (rarityInfo.glow){
-        ctx.shadowColor = rarityInfo.color;
-        ctx.shadowBlur = 7;
-      }
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
+        .continent {
+            position: absolute;
+            background: linear-gradient(145deg, #E8EDE0, #D5DDCE);
+            border: 1px solid rgba(28, 50, 41, 0.08);
+            box-shadow: 0 8px 32px rgba(28, 50, 41, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+            border-radius: 4px;
+            transition: box-shadow 0.3s;
+        }
 
-    // arbre vectoriel réaliste (à faible zoom : simple pastille de couleur pour la lisibilité du planisphère)
-    if (showTrees && size > 6){
-      drawTree(s.x, s.y - size*0.12, size*1.5, p);
-    } else if (size > 1.5){
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, Math.max(1, size*0.4), 0, Math.PI*2);
-      ctx.fillStyle = (p.canopy && p.canopy[0]) || "#2a6b3e";
-      ctx.globalAlpha = 0.85;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
+        .continent:hover {
+            box-shadow: 0 8px 40px rgba(28, 50, 41, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
 
-    if (showLabels && size > 22){
-      ctx.font = `600 ${Math.max(8, size*0.15)}px 'SF Mono', monospace`;
-      ctx.fillStyle = "rgba(234,255,244,0.9)";
-      ctx.textAlign = "center";
-      const label = p.name.length > 16 ? p.name.slice(0,15)+"…" : p.name;
-      ctx.fillText(label, s.x, s.y + size*0.62);
-    }
-    if (showPrices && size > 32){
-      ctx.font = `500 ${Math.max(8, size*0.13)}px 'SF Mono', monospace`;
-      ctx.fillStyle = p.owner === "free" ? "rgba(182,255,92,0.85)" : "rgba(159,184,172,0.7)";
-      ctx.fillText(p.owner === "free" ? ("$"+p.price) : (p.owner==="me"?"À MOI":"PRIS"), s.x, s.y + size*0.84);
-    }
-  });
+        .continent .region-label {
+            position: absolute;
+            font-family: var(--font-display);
+            font-style: italic;
+            font-size: 14px;
+            color: var(--ink-soft);
+            font-weight: 500;
+            pointer-events: none;
+            white-space: nowrap;
+            text-shadow: 0 1px 4px rgba(255,255,255,0.6);
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
 
-  requestAnimationFrame(render);
-}
-requestAnimationFrame(render);
+        .continent:hover .region-label {
+            opacity: 1;
+        }
 
-/* ============================================================
-   6. HIT TESTING (pixel -> parcelle)
-   ============================================================ */
+        /* ===== TREE MARKERS ===== */
+        .tree-marker {
+            position: absolute;
+            transform: translate(-50%, -100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            z-index: 5;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            will-change: transform;
+        }
 
-function findParcelAt(sx, sy){
-  const world_pt = screenToWorld(sx, sy);
-  // estimation q,r approx puis recherche locale
-  const wApprox = HEX_SIZE * 1.5;
-  const hApprox = HEX_SIZE * Math.sqrt(3);
-  const qApprox = Math.round(world_pt.x / wApprox);
-  const rApprox = Math.round(world_pt.y / hApprox);
+        .tree-marker:hover {
+            transform: translate(-50%, -100%) scale(1.15);
+            z-index: 10;
+        }
 
-  let best = null, bestDist = Infinity;
-  for(let dq=-2; dq<=2; dq++){
-    for(let dr=-2; dr<=2; dr++){
-      const q = qApprox+dq, r = rApprox+dr;
-      const key = q+","+r;
-      const p = world.get(key);
-      if (!p) continue;
-      const { x, y } = hexToPixel(q, r);
-      const dist = Math.hypot(x-world_pt.x, y-world_pt.y);
-      if (dist < bestDist){ bestDist = dist; best = key; }
-    }
-  }
-  // seuil de tolérance
-  if (best && bestDist < HEX_SIZE*1.05) return best;
-  return null;
-}
+        .tree-marker .t-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--card);
+            border: 2px solid var(--ink-faint);
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(28, 50, 41, 0.2);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+        }
 
-function getNeighbors(q, r){
-  // voisinage hexagonal offset pour colonnes impaires/paires (flat-top, "odd-q")
-  const parity = q % 2;
-  const evenOffsets = [[1,0],[1,-1],[0,-1],[-1,-1],[-1,0],[0,1]];
-  const oddOffsets  = [[1,1],[1,0],[0,-1],[-1,0],[-1,1],[0,1]];
-  const offsets = parity ? oddOffsets : evenOffsets;
-  return offsets.map(([dq,dr]) => {
-    const key = (q+dq)+","+(r+dr);
-    return world.get(key) || null;
-  });
-}
+        .tree-marker .t-icon::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
 
-/* ============================================================
-   7. INTERACTIONS SOURIS / TACTILE
-   ============================================================ */
+        .tree-marker:hover .t-icon::after {
+            opacity: 1;
+        }
 
-canvas.addEventListener('mousedown', (e) => {
-  dragging = true; dragMoved = false;
-  dragStart = { x: e.clientX, y: e.clientY };
-  cameraStart = { x: camera.x, y: camera.y };
-  canvas.classList.add('dragging');
-});
-window.addEventListener('mousemove', (e) => {
-  if (dragging){
-    const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
-    if (Math.abs(dx)+Math.abs(dy) > 4) dragMoved = true;
-    camera.x = cameraStart.x + dx/camera.zoom;
-    camera.y = cameraStart.y + dy/camera.zoom;
-  } else {
-    const key = findParcelAt(e.clientX, e.clientY);
-    hoveredKey = key;
-    canvas.style.cursor = key ? 'pointer' : 'grab';
-  }
-});
-window.addEventListener('mouseup', (e) => {
-  if (dragging && !dragMoved){
-    const key = findParcelAt(e.clientX, e.clientY);
-    if (key) selectParcel(key);
-  }
-  dragging = false;
-  canvas.classList.remove('dragging');
-});
+        .tree-marker[data-owner="user"] .t-icon {
+            border-color: var(--canopy-bright);
+            box-shadow: 0 0 0 4px rgba(62, 146, 104, 0.2), 0 4px 12px rgba(28, 50, 41, 0.2);
+        }
 
-canvas.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const before = screenToWorld(e.clientX, e.clientY);
-  const factor = e.deltaY > 0 ? 0.9 : 1.111;
-  camera.zoom = Math.min(4.5, Math.max(0.18, camera.zoom * factor));
-  const after = screenToWorld(e.clientX, e.clientY);
-  camera.x += (after.x - before.x);
-  camera.y += (after.y - before.y);
-  updateReadout();
-}, { passive:false });
+        .tree-marker[data-owner="user"] .t-icon::after {
+            background: radial-gradient(circle at 30% 30%, rgba(62, 146, 104, 0.3), transparent 70%);
+        }
 
-document.getElementById('zoomIn').addEventListener('click', () => zoomStep(1.25));
-document.getElementById('zoomOut').addEventListener('click', () => zoomStep(0.8));
-function zoomStep(factor){
-  const cx = window.innerWidth/2, cy = window.innerHeight/2;
-  const before = screenToWorld(cx, cy);
-  camera.zoom = Math.min(4.5, Math.max(0.18, camera.zoom * factor));
-  const after = screenToWorld(cx, cy);
-  camera.x += (after.x - before.x);
-  camera.y += (after.y - before.y);
-  updateReadout();
-}
+        .tree-marker[data-rarity="epic"] .t-icon {
+            border-color: #8B5FBF;
+            box-shadow: 0 0 0 3px rgba(139, 95, 191, 0.2), 0 4px 12px rgba(28, 50, 41, 0.2);
+        }
 
-// touch support (mobile) — preventDefault pour éviter tout conflit avec le scroll/zoom du navigateur
-let lastTouchDist = null;
-let touchStartTime = 0;
-canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  if (e.touches.length === 1){
-    dragging = true; dragMoved = false;
-    touchStartTime = Date.now();
-    dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    cameraStart = { x: camera.x, y: camera.y };
-  } else if (e.touches.length === 2){
-    dragging = false;
-    lastTouchDist = Math.hypot(
-      e.touches[0].clientX - e.touches[1].clientX,
-      e.touches[0].clientY - e.touches[1].clientY
-    );
-  }
-}, {passive:false});
-canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  if (e.touches.length === 1 && dragging){
-    const dx = e.touches[0].clientX - dragStart.x, dy = e.touches[0].clientY - dragStart.y;
-    if (Math.abs(dx)+Math.abs(dy) > 6) dragMoved = true;
-    camera.x = cameraStart.x + dx/camera.zoom;
-    camera.y = cameraStart.y + dy/camera.zoom;
-  } else if (e.touches.length === 2 && lastTouchDist){
-    const dist = Math.hypot(
-      e.touches[0].clientX - e.touches[1].clientX,
-      e.touches[0].clientY - e.touches[1].clientY
-    );
-    const factor = dist / lastTouchDist;
-    camera.zoom = Math.min(4.5, Math.max(0.18, camera.zoom * factor));
-    lastTouchDist = dist;
-  }
-}, {passive:false});
-canvas.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  if (!dragMoved && e.changedTouches.length === 1 && dragging){
-    const key = findParcelAt(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-    if (key) selectParcel(key);
-  }
-  dragging = false; lastTouchDist = null;
-}, {passive:false});
+        .tree-marker[data-rarity="legendary"] .t-icon {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 6px rgba(201, 168, 76, 0.25), 0 4px 20px rgba(201, 168, 76, 0.3);
+            animation: legendaryGlow 2.6s ease-in-out infinite;
+        }
 
-function updateReadout(){
-  document.getElementById('roZoom').textContent = camera.zoom.toFixed(2) + "×";
-  const centerWorld = screenToWorld(window.innerWidth/2, window.innerHeight/2);
-  const { lng, lat } = pixelToLngLat(centerWorld.x, centerWorld.y);
-  document.getElementById('roLat').textContent = lat.toFixed(2)+"°";
-  document.getElementById('roLng').textContent = lng.toFixed(2)+"°";
-  document.getElementById('scaleReadout').textContent =
-    camera.zoom > 2.5 ? "1 parcelle ≈ 0.5 ha" : camera.zoom > 0.9 ? "Vue régionale" : "Vue planétaire";
-}
-setInterval(updateReadout, 300);
+        @keyframes legendaryGlow {
+            0%, 100% {
+                box-shadow: 0 0 0 6px rgba(201, 168, 76, 0.25), 0 4px 20px rgba(201, 168, 76, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(201, 168, 76, 0.1), 0 4px 30px rgba(201, 168, 76, 0.4);
+            }
+        }
 
-/* ============================================================
-   8. GOD MODE
-   ============================================================ */
+        .tree-marker.stage-2 .t-icon {
+            width: 34px;
+            height: 34px;
+            font-size: 18px;
+        }
 
-const godToggle = document.getElementById('godToggle');
-godToggle.addEventListener('click', () => {
-  godMode = !godMode;
-  godToggle.classList.toggle('active', godMode);
-  showToast(godMode ? "⚡ God Mode activé — attribution instantanée" : "God Mode désactivé");
-  if (selectedKey) renderDetailPanel(selectedKey); // refresh bouton
-});
+        .tree-marker.stage-3 .t-icon {
+            width: 42px;
+            height: 42px;
+            font-size: 22px;
+            border-width: 3px;
+        }
 
-/* ============================================================
-   9. SÉLECTION & PANNEAU DE DÉTAIL
-   ============================================================ */
+        .tree-marker.growing .t-icon {
+            animation: growPulse 0.8s ease-in-out;
+        }
 
-const detailPanel = document.getElementById('detailPanel');
+        @keyframes growPulse {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.4); box-shadow: 0 0 40px rgba(62, 146, 104, 0.5); }
+            60% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
 
-function selectParcel(key){
-  selectedKey = key;
-  renderDetailPanel(key);
-  detailPanel.classList.add('open');
-}
+        .tree-marker.exploding .t-icon {
+            animation: explodeGrow 1.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
 
-function closeDetail(){
-  detailPanel.classList.remove('open');
-  selectedKey = null;
-}
+        @keyframes explodeGrow {
+            0% { transform: scale(1); opacity: 1; }
+            20% { transform: scale(2.5); opacity: 1; box-shadow: 0 0 80px rgba(62, 146, 104, 0.6); }
+            50% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
 
-function ownerRowHTML(p){
-  if (p.owner === "me"){
-    return `<div class="detail-owner-row"><span class="owner-dot" style="background:var(--owned)"></span> Cette parcelle vous appartient</div>`;
-  }
-  if (p.owner === "other"){
-    return `<div class="detail-owner-row"><span class="owner-dot" style="background:var(--other)"></span> Propriétaire : <b style="color:var(--text-hi)">${p.ownerName}</b></div>`;
-  }
-  return `<div class="detail-owner-row"><span class="owner-dot" style="background:var(--free); border:1px solid var(--line-strong)"></span> Parcelle libre — disponible à l'acquisition</div>`;
-}
+        .tree-marker.selected .t-icon {
+            outline: 3px solid var(--ink);
+            outline-offset: 3px;
+        }
 
-function buyButtonHTML(p){
-  if (p.owner === "me"){
-    return `<button class="buy-btn mine" disabled>✔ Déjà dans votre canopée</button>`;
-  }
-  if (p.owner === "other"){
-    return `<button class="buy-btn locked" disabled>🔒 Propriété d'un autre explorateur</button>`;
-  }
-  if (godMode){
-    return `<button class="buy-btn claim" id="claimBtn">⚡ Attribution instantanée — God Mode</button>`;
-  }
-  return `<button class="buy-btn locked" disabled>Paiement indisponible en démo — activez God Mode</button>`;
-}
+        .tree-marker.dimmed {
+            opacity: 0.2;
+            pointer-events: none;
+        }
 
-function renderDetailPanel(key){
-  const p = world.get(key);
-  if (!p) return;
-  const rarityInfo = RARITIES[p.rarity];
-  const neighbors = getNeighbors(p.q, p.r).filter(Boolean);
+        .t-price {
+            font-family: var(--font-mono);
+            font-size: 8px;
+            color: var(--ink-soft);
+            background: rgba(255, 255, 255, 0.92);
+            padding: 1px 6px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            backdrop-filter: blur(4px);
+            transition: all 0.3s;
+        }
 
-  detailPanel.innerHTML = `
-    <div class="detail-hero">
-      <div class="rarity-band" style="background:${rarityInfo.color}"></div>
-      <div class="detail-close" id="closeDetailBtn">✕</div>
-      <div class="detail-hero-icon">${p.icon}</div>
-    </div>
-    <div class="detail-body">
-      <div class="detail-tag" style="background:${rarityInfo.color}22; color:${rarityInfo.color}; border:1px solid ${rarityInfo.color}55">${rarityInfo.label}</div>
-      <div class="detail-title">${p.name}</div>
-      <div class="detail-region">${p.regionName} · Parcelle ${p.id}</div>
+        .t-price.free {
+            color: var(--canopy-bright);
+            border-color: var(--canopy-bright);
+        }
 
-      ${ownerRowHTML(p)}
+        .t-price.owned {
+            color: var(--canopy);
+            background: rgba(62, 146, 104, 0.1);
+            border-color: var(--canopy);
+        }
 
-      <div class="detail-stats-grid">
-        <div class="dstat">
-          <div class="dstat-label">Coordonnées GPS</div>
-          <div class="dstat-value mono-small">${p.lat}, ${p.lng}</div>
-        </div>
-        <div class="dstat">
-          <div class="dstat-label">Rendement / jour</div>
-          <div class="dstat-value">$${p.dailyYield.toFixed(3)}</div>
-        </div>
-        <div class="dstat">
-          <div class="dstat-label">Prix</div>
-          <div class="dstat-value">$${p.price.toLocaleString('fr-FR')}</div>
-        </div>
-        <div class="dstat">
-          <div class="dstat-label">Rareté</div>
-          <div class="dstat-value" style="color:${rarityInfo.color}">${rarityInfo.label}</div>
-        </div>
-      </div>
+        /* ===== PARTICLES ===== */
+        .particle-container {
+            position: absolute;
+            pointer-events: none;
+            z-index: 50;
+        }
 
-      <div class="detail-desc">
-        Spécimen recensé dans la canopée de ${p.regionName}. Chaque parcelle génère un rendement passif quotidien en points éco, proportionnel à sa rareté et à la santé de son biotope environnant.
-      </div>
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particleFly 1.5s ease-out forwards;
+        }
 
-      ${buyButtonHTML(p)}
+        @keyframes particleFly {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0);
+            }
+        }
 
-      <div class="neighbors-title">
-        <span>Canopée voisine</span>
-        <span style="color:var(--text-low); font-weight:400;">${neighbors.length} parcelle${neighbors.length>1?'s':''}</span>
-      </div>
-      <div class="neighbors-grid">
-        ${neighbors.length ? neighbors.map(n => {
-          const nr = RARITIES[n.rarity];
-          const statusColor = n.owner === "me" ? "var(--owned)" : n.owner === "other" ? "var(--other)" : "var(--free)";
-          return `<div class="neighbor-cell" data-key="${n.q},${n.r}" title="${n.name}">
-            <div class="n-status" style="background:${statusColor}"></div>
-            <div class="n-icon">${n.icon}</div>
-            <div class="n-price">${n.owner==='free' ? '$'+n.price : (n.owner==='me'?'À moi':'Pris')}</div>
-          </div>`;
-        }).join('') : '<div class="neighbor-empty">Zone frontalière — aucune canopée voisine</div>'}
-      </div>
-    </div>
-  `;
+        /* ===== TOPBAR ===== */
+        .topbar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 68px;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            background: linear-gradient(180deg, rgba(238, 242, 232, 0.95) 0%, rgba(238, 242, 232, 0) 100%);
+            pointer-events: none;
+        }
 
-  document.getElementById('closeDetailBtn').addEventListener('click', closeDetail);
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            pointer-events: auto;
+            cursor: pointer;
+        }
 
-  const claimBtn = document.getElementById('claimBtn');
-  if (claimBtn){
-    claimBtn.addEventListener('click', () => claimParcel(key));
-  }
+        .brand-mark {
+            font-size: 28px;
+            filter: drop-shadow(0 2px 8px rgba(28, 50, 41, 0.15));
+            transition: transform 0.3s;
+        }
 
-  detailPanel.querySelectorAll('.neighbor-cell').forEach(cell => {
-    cell.addEventListener('click', () => {
-      const k = cell.getAttribute('data-key');
-      if (world.get(k)) selectParcel(k);
-    });
-  });
-}
+        .brand:hover .brand-mark {
+            transform: rotate(-5deg) scale(1.05);
+        }
 
-function claimParcel(key){
-  const p = world.get(key);
-  if (!p || p.owner !== "free") return;
-  p.owner = "me";
-  state.points += Math.round(p.price * 0.12);
-  showToast(`🌱 ${p.name} rejoint votre canopée !`);
-  renderDetailPanel(key);
-  updateStats();
-}
+        .brand-name {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: var(--ink);
+            transition: color 0.3s;
+        }
 
-/* ============================================================
-   10. STATS SIDEBAR
-   ============================================================ */
+        .brand-name em {
+            font-style: italic;
+            color: var(--canopy-bright);
+            font-weight: 600;
+        }
 
-function updateStats(){
-  let owned = 0, totalValue = 0, totalYield = 0;
-  world.forEach(p => {
-    if (p.owner === "me"){
-      owned++;
-      totalValue += p.price;
-      totalYield += p.dailyYield;
-    }
-  });
-  document.getElementById('statTrees').textContent = owned;
-  document.getElementById('statValue').textContent = "$" + totalValue.toLocaleString('fr-FR');
-  document.getElementById('statYield').textContent = "$" + totalYield.toFixed(2);
-  document.getElementById('statYieldPts').textContent = "+" + Math.round(totalYield*4) + " pts éco / jour";
-  document.getElementById('statPoints').textContent = state.points.toLocaleString('fr-FR');
-}
-updateStats();
+        .brand:hover .brand-name em {
+            color: var(--canopy-light);
+        }
 
-/* ============================================================
-   11. LISTE DES RÉGIONS (sidebar) + navigation rapide
-   ============================================================ */
+        .top-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            pointer-events: auto;
+        }
 
-const regionListEl = document.getElementById('regionList');
-REGIONS.forEach(region => {
-  let count = 0;
-  world.forEach(p => { if (p.region === region.key) count++; });
-  const row = document.createElement('div');
-  row.className = 'region-item';
-  row.innerHTML = `<span>${region.name}</span><span class="count">${count}</span>`;
-  row.addEventListener('click', () => flyToRegion(region));
-  regionListEl.appendChild(row);
-});
+        .wallet-pill {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 30px;
+            padding: 8px 20px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            box-shadow: 0 4px 20px rgba(28, 50, 41, 0.08);
+            backdrop-filter: blur(8px);
+            transition: all 0.3s;
+        }
 
-function flyToRegion(region){
-  // centre la caméra sur le centre géographique réel de la région
-  const lng = (region.lngMin + region.lngMax) / 2;
-  const lat = (region.latMin + region.latMax) / 2;
-  const p = lngLatToPixel(lng, lat);
-  camera.x = -p.x;
-  camera.y = -p.y;
-  camera.zoom = 3.2;
-  closeSidebar();
-}
+        .wallet-pill:hover {
+            box-shadow: 0 6px 30px rgba(28, 50, 41, 0.12);
+            transform: translateY(-1px);
+        }
 
-/* ============================================================
-   12b. TIROIR SIDEBAR (mobile)
-   ============================================================ */
-const sidebarEl = document.getElementById('sidebar');
-const sidebarScrim = document.getElementById('sidebarScrim');
-const menuToggle = document.getElementById('menuToggle');
+        .wallet-pill b {
+            color: var(--canopy-bright);
+            font-weight: 600;
+        }
 
-function openSidebar(){
-  sidebarEl.classList.add('open');
-  sidebarScrim.classList.add('open');
-}
-function closeSidebar(){
-  sidebarEl.classList.remove('open');
-  sidebarScrim.classList.remove('open');
-}
-menuToggle.addEventListener('click', () => {
-  sidebarEl.classList.contains('open') ? closeSidebar() : openSidebar();
-});
-sidebarScrim.addEventListener('click', closeSidebar);
+        .wallet-pill .sep {
+            width: 1px;
+            height: 20px;
+            background: var(--line-strong);
+        }
 
-/* ============================================================
-   12. TOASTS
-   ============================================================ */
+        .mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 30px;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(28, 50, 41, 0.08);
+            color: var(--ink-soft);
+            transition: all 0.3s;
+            font-family: var(--font-body);
+            pointer-events: auto;
+        }
 
-function showToast(msg){
-  const wrap = document.getElementById('toastWrap');
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.textContent = msg;
-  wrap.appendChild(t);
-  setTimeout(() => t.remove(), 2600);
-}
+        .mode-toggle:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 30px rgba(28, 50, 41, 0.12);
+        }
 
-/* ============================================================
-   13. ESC pour fermer le panneau
-   ============================================================ */
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeDetail();
-});
+        .mode-toggle.active {
+            background: var(--ink);
+            color: #EEF2E8;
+            border-color: var(--ink);
+            box-shadow: 0 4px 20px rgba(28, 50, 41, 0.25);
+        }
 
-updateReadout();
-showToast("🌍 Bienvenue sur CANOPY — le marché des canopées rares");
+        .mode-toggle .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--ink-faint);
+            transition: all 0.3s;
+        }
 
-})();
-</script>
-</body>
-</html>
+        .mode-toggle.active .dot {
+            background: var(--sun);
+            box-shadow: 0 0 12px var(--sun);
+        }
+
+        .menu-toggle {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            pointer-events: auto;
+            font-size: 18px;
+            transition: all 0.3s;
+        }
+
+        .menu-toggle:hover {
+            background: var(--paper-2);
+            transform: scale(1.05);
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 280px;
+            z-index: 15;
+            padding: 88px 20px 20px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.92);
+            border-right: 1px solid var(--line);
+            backdrop-filter: blur(16px);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--line-strong);
+            border-radius: 2px;
+        }
+
+        .block-title {
+            font-size: 10px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--ink-faint);
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .stat-card {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: var(--paper-2);
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            border-color: var(--line-strong);
+            transform: translateY(-1px);
+        }
+
+        .stat-label {
+            font-size: 9px;
+            color: var(--ink-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-family: var(--font-mono);
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--ink);
+        }
+
+        .stat-value.accent {
+            color: var(--canopy-bright);
+        }
+
+        .stat-value.gold {
+            color: var(--gold);
+        }
+
+        .stat-value .sub {
+            font-size: 11px;
+            font-weight: 400;
+            color: var(--ink-faint);
+        }
+
+        .co2-banner {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, rgba(62, 146, 104, 0.08), rgba(62, 146, 104, 0.02));
+            font-size: 12px;
+            color: var(--ink-soft);
+            line-height: 1.6;
+        }
+
+        .co2-banner b {
+            color: var(--canopy-bright);
+            font-family: var(--font-mono);
+        }
+
+        .co2-banner .highlight {
+            display: inline-block;
+            background: rgba(62, 146, 104, 0.1);
+            padding: 0 6px;
+            border-radius: 4px;
+        }
+
+        .rarity-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .chip {
+            font-size: 10px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            cursor: pointer;
+            color: var(--ink-soft);
+            font-weight: 600;
+            transition: all 0.25s;
+            font-family: var(--font-body);
+        }
+
+        .chip:hover {
+            border-color: var(--line-strong);
+            transform: translateY(-1px);
+        }
+
+        .chip.on {
+            background: var(--ink);
+            color: #EEF2E8;
+            border-color: var(--ink);
+        }
+
+        .region-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .region-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--ink-soft);
+            transition: all 0.2s;
+        }
+
+        .region-item:hover {
+            background: var(--paper-2);
+            color: var(--ink);
+        }
+
+        .region-item .count {
+            font-family: var(--font-mono);
+            color: var(--ink-faint);
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .footer-hint {
+            margin-top: auto;
+            font-size: 10px;
+            color: var(--ink-faint);
+            line-height: 1.8;
+            padding-top: 14px;
+            border-top: 1px solid var(--line);
+        }
+
+        .footer-hint kbd {
+            background: var(--paper-2);
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-family: var(--font-mono);
+            font-size: 9px;
+        }
+
+        .sidebar-scrim {
+            display: none;
+            position: absolute;
+            inset: 0;
+            z-index: 14;
+            background: rgba(28, 50, 41, 0.35);
+            backdrop-filter: blur(4px);
+        }
+
+        .sidebar-scrim.open {
+            display: block;
+        }
+
+        /* ===== ZOOM CONTROLS ===== */
+        .zoom-controls {
+            position: absolute;
+            right: 24px;
+            bottom: 24px;
+            z-index: 25;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--card);
+            box-shadow: 0 4px 20px rgba(28, 50, 41, 0.1);
+        }
+
+        .zoom-btn {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--ink-soft);
+            cursor: pointer;
+            background: none;
+            border: none;
+            transition: all 0.2s;
+            font-family: var(--font-body);
+        }
+
+        .zoom-btn:hover {
+            background: var(--paper-2);
+            color: var(--ink);
+        }
+
+        .zoom-btn:active {
+            transform: scale(0.92);
+        }
+
+        .zoom-btn+.zoom-btn {
+            border-top: 1px solid var(--line);
+        }
+
+        /* ===== DETAIL PANEL ===== */
+        .detail-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 400px;
+            z-index: 30;
+            background: var(--card);
+            border-left: 1px solid var(--line);
+            transform: translateX(105%);
+            transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+            overflow-y: auto;
+            box-shadow: -10px 0 60px rgba(28, 50, 41, 0.12);
+        }
+
+        .detail-panel.open {
+            transform: translateX(0);
+        }
+
+        .detail-panel::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .detail-panel::-webkit-scrollbar-thumb {
+            background: var(--line-strong);
+            border-radius: 2px;
+        }
+
+        .detail-hero {
+            position: relative;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(160deg, var(--paper-2), var(--paper));
+            border-bottom: 1px solid var(--line);
+            overflow: hidden;
+        }
+
+        .detail-hero .rarity-band {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+        }
+
+        .detail-hero .hero-bg-pattern {
+            position: absolute;
+            inset: 0;
+            opacity: 0.05;
+            background-image: 
+                radial-gradient(circle at 20% 30%, var(--canopy) 1px, transparent 1px),
+                radial-gradient(circle at 80% 70%, var(--canopy) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .detail-hero-icon {
+            font-size: 80px;
+            filter: drop-shadow(0 8px 24px rgba(28, 50, 41, 0.2));
+            animation: swayTree 5s ease-in-out infinite;
+            z-index: 1;
+            transition: transform 0.5s;
+        }
+
+        @keyframes swayTree {
+            0%, 100% { transform: rotate(-2deg) scale(1); }
+            50% { transform: rotate(2deg) scale(1.02); }
+        }
+
+        .detail-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--card);
+            border: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--ink-soft);
+            transition: all 0.3s;
+            z-index: 2;
+        }
+
+        .detail-close:hover {
+            background: var(--paper-2);
+            transform: rotate(90deg);
+        }
+
+        .detail-body {
+            padding: 24px 26px;
+        }
+
+        .detail-tag {
+            display: inline-block;
+            font-size: 10px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .detail-title {
+            font-family: var(--font-display);
+            font-size: 25px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: var(--ink);
+        }
+
+        .detail-latin {
+            font-family: var(--font-display);
+            font-style: italic;
+            font-size: 15px;
+            color: var(--ink-faint);
+            margin-bottom: 16px;
+        }
+
+        .detail-region {
+            font-size: 13px;
+            color: var(--ink-faint);
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .detail-region span {
+            background: var(--paper-2);
+            padding: 2px 10px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+        }
+
+        .stage-track {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 18px;
+        }
+
+        .stage-dot {
+            flex: 1;
+            height: 6px;
+            border-radius: 4px;
+            background: var(--paper-2);
+            border: 1px solid var(--line);
+            transition: all 0.5s;
+        }
+
+        .stage-dot.filled {
+            background: var(--canopy-bright);
+            border-color: var(--canopy-bright);
+        }
+
+        .stage-dot.filled.gold {
+            background: var(--gold);
+            border-color: var(--gold);
+        }
+
+        .stage-label {
+            font-size: 10px;
+            color: var(--ink-faint);
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            min-width: 50px;
+            text-align: right;
+        }
+
+        .detail-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .dstat {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 12px;
+            background: var(--paper-2);
+        }
+
+        .dstat-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--ink-faint);
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .dstat-value {
+            font-family: var(--font-mono);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--ink);
+        }
+
+        .detail-desc {
+            font-size: 13px;
+            line-height: 1.7;
+            color: var(--ink-soft);
+            margin-bottom: 18px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .owner-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: var(--paper-2);
+            border: 1px solid var(--line);
+            margin-bottom: 16px;
+            font-size: 12px;
+            color: var(--ink-soft);
+        }
+
+        .owner-row .avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--canopy-bright);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: var(--font-mono);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .btn:hover::after {
+            opacity: 1;
+        }
+
+        .btn.buy {
+            background: linear-gradient(135deg, var(--canopy-bright), var(--canopy));
+            color: #fff;
+            box-shadow: 0 6px 24px rgba(62, 146, 104, 0.35);
+        }
+
+        .btn.buy:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(62, 146, 104, 0.45);
+        }
+
+        .btn.grow {
+            background: linear-gradient(135deg, var(--sun), #C49A3A);
+            color: #3a2a08;
+            box-shadow: 0 6px 24px rgba(217, 164, 65, 0.35);
+        }
+
+        .btn.grow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(217, 164, 65, 0.45);
+        }
+
+        .btn.locked {
+            background: var(--paper-2);
+            color: var(--ink-faint);
+            border: 1px solid var(--line);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn.locked:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn.mine {
+            background: rgba(62, 146, 104, 0.1);
+            color: var(--canopy-bright);
+            border: 1px solid rgba(62, 146, 104, 0.3);
+            cursor: default;
+        }
+
+        .btn.mine:hover {
+            transform: none;
+        }
+
+        .btn.danger {
+            background: #fff;
+            color: var(--danger);
+            border: 1px solid rgba(184, 72, 63, 0.3);
+        }
+
+        .btn.danger:hover {
+            background: #FEF5F4;
+            border-color: var(--danger);
+        }
+
+        .btn.admin {
+            background: var(--ink);
+            color: #EEF2E8;
+            box-shadow: 0 6px 24px rgba(28, 50, 41, 0.25);
+        }
+
+        .btn.admin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(28, 50, 41, 0.35);
+        }
+
+        .btn .btn-icon {
+            margin-right: 8px;
+        }
+
+        .admin-box {
+            border: 1px dashed var(--line-strong);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 14px;
+            background: rgba(28, 50, 41, 0.03);
+        }
+
+        .admin-box .block-title {
+            margin-bottom: 8px;
+        }
+
+        .admin-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .admin-row .btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 11px;
+            margin-bottom: 0;
+        }
+
+        .neighbors-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--ink-faint);
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .neighbors-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .neighbor-cell {
+            aspect-ratio: 1;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: var(--paper-2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .neighbor-cell:hover {
+            border-color: var(--line-strong);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 16px rgba(28, 50, 41, 0.08);
+        }
+
+        .neighbor-cell .n-icon {
+            font-size: 20px;
+        }
+
+        .neighbor-cell .n-name {
+            font-size: 8px;
+            color: var
