@@ -1,289 +1,89 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TerraNova Global - L'Empire Mondial des Arbres</title>
-    <style>
-        :root { --bg: #040704; --card: #0d160e; --accent: #22c55e; --text: #f0fdf4; --border: #182b19; }
-        body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        
-        .container { width: 100%; max-width: 750px; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; gap: 15px; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CANOPY // Earth Asset Exchange</title>
 
-        header { text-align: center; margin-top: 5px; }
-        h1 { color: var(--accent); font-size: 1.8rem; margin: 0 0 5px 0; font-weight: 900; letter-spacing: -0.5px; }
-        p.subtitle { color: #86efac; font-size: 0.85rem; margin: 0; }
+<style>
+  :root {
+    --bg: #050b09;
+    --panel: rgba(7, 18, 14, .88);
+    --line: rgba(120, 255, 190, .16);
+    --line-strong: rgba(120, 255, 190, .45);
+    --text: #ecfff6;
+    --muted: #8fa69b;
+    --green: #38ff9c;
+    --cyan: #44e8ff;
+    --gold: #ffd166;
+    --danger: #ff5c77;
+    --purple: #b18cff;
+  }
 
-        /* Dashboard Joueur */
-        .dashboard { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 8px 25px rgba(0,0,0,0.6); }
-        .stat-item { text-align: center; }
-        .stat-value { font-size: 1.2rem; font-weight: bold; color: #4ade80; }
-        .stat-label { font-size: 0.7rem; color: #86efac; text-transform: uppercase; }
+  * { box-sizing: border-box; }
 
-        /* God Mode Admin Panel */
-        .god-panel { background: rgba(15, 35, 15, 0.9); border: 1px dashed var(--accent); padding: 10px 15px; border-radius: 12px; font-size: 0.8rem; display: flex; flex-direction: column; gap: 6px; }
-        .god-panel input { background: #000; border: 1px solid var(--border); color: #fff; padding: 6px; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 0.8rem; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
 
-        /* MAP GÉANTE (Style Earth 2) */
-        .map-section { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 15px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
-        .map-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; font-weight: bold; color: #4ade80; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-        
-        .world-map-container { 
-            max-height: 420px; 
-            overflow-y: auto; 
-            padding: 8px; 
-            background: #060a06; 
-            border-radius: 12px; 
-            border: 1px solid var(--border); 
-        }
-        
-        /* Grille géante multi-parcelles */
-        .world-grid { 
-            display: grid; 
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 10px; 
-        }
-        
-        .map-tile { 
-            background: #111f12; 
-            border: 1px solid #233d25; 
-            border-radius: 10px; 
-            padding: 10px 6px; 
-            text-align: center; 
-            cursor: pointer; 
-            transition: 0.2s; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            gap: 4px; 
-            position: relative;
-        }
-        .map-tile:hover { border-color: var(--accent); transform: scale(1.02); background: #162918; }
-        .map-tile.owned-by-me { background: rgba(59, 130, 246, 0.12); border-color: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.2); }
-        .map-tile.owned-by-other { background: rgba(234, 179, 8, 0.08); border-color: #ca8a04; opacity: 0.75; }
-        
-        .tile-icon { font-size: 1.8rem; margin: 2px 0; }
-        .tile-region { font-size: 0.65rem; color: #86efac; text-transform: uppercase; letter-spacing: 0.5px; }
-        .tile-name { font-size: 0.8rem; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
-        .tile-price { font-size: 0.75rem; font-weight: bold; color: #4ade80; }
+  #app, #map {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
 
-        /* Modale d'inspection d'une parcelle et de sa canopée voisine */
-        .modal-overlay { background: #0e170f; border: 2px solid var(--accent); border-radius: 14px; padding: 15px; display: none; flex-direction: column; gap: 12px; margin-top: 5px; animation: fadeIn 0.2s; }
-        .modal-overlay.active { display: flex; }
-        .modal-title { font-weight: bold; font-size: 1.05rem; color: #fff; display: flex; justify-content: space-between; align-items: center; }
-        .modal-details { font-size: 0.85rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 5px; background: #060a06; padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
-        
-        .action-buttons { display: flex; gap: 8px; }
-        .btn-stripe { flex: 1; padding: 11px; background: var(--accent); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 0.85rem; text-align: center; text-decoration: none; cursor: pointer; }
-        .btn-god { flex: 1; padding: 11px; background: #3b82f6; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 0.85rem; cursor: pointer; }
-        .btn-close { background: #334155; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; }
+  #map {
+    cursor: grab;
+    touch-action: none;
+    background:
+      radial-gradient(circle at 50% 45%, #0b2d22 0%, #07150f 42%, #030605 100%);
+  }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
-</head>
-<body>
+  #map.dragging { cursor: grabbing; }
 
-    <div class="container">
-        <header>
-            <h1>🌍 TerraNova Global Map</h1>
-            <p class="subtitle">Explorez la carte mondiale, collectionnez des essences rares et constituez votre canopée.</p>
-        </header>
+  .topbar {
+    position: fixed;
+    z-index: 10;
+    top: 20px;
+    left: 24px;
+    right: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+  }
 
-        <!-- Dashboard du Joueur -->
-        <div class="dashboard">
-            <div class="stat-item">
-                <div class="stat-value" id="user-points">450</div>
-                <div class="stat-label">Points Éco</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="user-trees">4</div>
-                <div class="stat-label">Parcelles</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="tree-income">+85 pts/j</div>
-                <div class="stat-label">Revenu Passif</div>
-            </div>
-        </div>
+  .brand, .top-actions {
+    pointer-events: auto;
+  }
 
-        <!-- God Mode Admin (Liens Stripe clients) -->
-        <div class="god-panel">
-            <strong>🛠️ GOD MODE (Configuration Stripe Clients)</strong>
-            <input type="text" id="admin-stripe-link" placeholder="Lien Stripe global (ex: https://buy.stripe.com/...)" value="https://buy.stripe.com/test_votre_lien">
-        </div>
+  .brand {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
 
-        <!-- SECTION CARTE MONDIALE -->
-        <div class="map-section">
-            <div class="map-header">
-                <span>📍 Carte Mondiale des Parcelles (Monde Entier)</span>
-                <span style="font-size: 0.75rem; color: #a3e635;">Zoom sur la Canopée active</span>
-            </div>
+  .logo {
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--green);
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: rgba(20,255,140,.08);
+    box-shadow: 0 0 28px rgba(56,255,156,.18);
+    font-size: 20px;
+  }
 
-            <!-- Grille géante de la map -->
-            <div class="world-map-container">
-                <div class="world-grid" id="world-grid">
-                    <!-- Les parcelles mondiales sont injectées dynamiquement ici -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Panneau d'achat / Inspection détaillée d'une parcelle -->
-        <div class="modal-overlay" id="tree-modal">
-            <div class="modal-title">
-                <span id="modal-title-text">Détails de la parcelle</span>
-                <button class="btn-close" onclick="closeModal()">Fermer</button>
-            </div>
-            <div class="modal-details" id="modal-details-text">
-                <!-- Détails injectés -->
-            </div>
-            <div class="action-buttons">
-                <!-- Redirection du client vers le lien Stripe -->
-                <a href="https://buy.stripe.com/test_votre_lien" target="_blank" id="modal-stripe-btn" class="btn-stripe">Acheter (Client)</a>
-                <!-- God Mode pour s'attribuer instantanément la parcelle -->
-                <button class="btn-god" onclick="godClaimSelectedTile()">⚡ God Mode : S'attribuer</button>
-            </div>
-        </div>
-
-    </div>
-
-    <script>
-        // Catalogue mondial des arbres de légende avec différentes races et valeurs
-        const treeSpecies = [
-            { name: "Baobab Ancestral", region: "Afrique", icon: "🌳", rarity: "Légendaire", price: 49.99, income: 120 },
-            { name: "Séquoia Géant", region: "Amérique du Nord", icon: "🌲", rarity: "Légendaire", price: 39.99, income: 95 },
-            { name: "Banyan Sacré", region: "Asie du Sud", icon: "🌿", rarity: "Rare", price: 19.99, income: 45 },
-            { name: "Acajou d'Amazonie", region: "Amérique du Sud", icon: "🌴", rarity: "Rare", price: 14.99, income: 35 },
-            { name: "Cerisier Sakura", region: "Japon", icon: "🌸", rarity: "Magique", price: 29.99, income: 70 },
-            { name: "Arbre de Josué", region: "Désert de Mojave", icon: "🌵", rarity: "Commun", price: 4.99, income: 10 },
-            { name: "Pin Parasol", region: "Méditerranée", icon: "🌲", rarity: "Commun", price: 6.99, income: 15 },
-            { name: "Eucalyptus Bleu", region: "Australie", icon: "🌿", rarity: "Rare", price: 12.99, income: 30 }
-        ];
-
-        // Génération d'une immense map mondiale virtuelle (ex: 24 parcelles initiales connectées en canopée)
-        const totalTiles = 24;
-        let mapTilesData = [];
-        let selectedTileIndex = null;
-
-        let userPoints = 450;
-        let userTreesCount = 4;
-        let totalIncome = 85;
-
-        function initWorldMap() {
-            const grid = document.getElementById('world-grid');
-            grid.innerHTML = '';
-
-            for (let i = 1; i <= totalTiles; i++) {
-                // Assigner une espèce du catalogue de façon cyclique/aléatoire
-                const species = treeSpecies[(i - 1) % treeSpecies.length];
-                
-                let status = 'free';
-                let owner = null;
-
-                // Quelques parcelles déjà possédées pour donner vie à la map
-                if (i === 2 || i === 9) {
-                    status = 'owned-by-me';
-                    owner = 'Vous';
-                } else if (i === 5 || i === 16) {
-                    status = 'owned-by-other';
-                    owner = 'Investisseur_' + i;
-                }
-
-                mapTilesData.push({
-                    id: i,
-                    name: species.name,
-                    region: species.region,
-                    icon: species.icon,
-                    rarity: species.rarity,
-                    price: species.price,
-                    income: species.income,
-                    status: status,
-                    owner: owner,
-                    coords: `${(12.34 + i).toFixed(4)}° N, ${(45.67 - i).toFixed(4)}° E`
-                });
-
-                // Rendu visuel de la parcelle sur la map
-                const tile = document.createElement('div');
-                tile.className = `map-tile ${status === 'owned-by-me' ? 'owned-by-me' : (status === 'owned-by-other' ? 'owned-by-other' : '')}`;
-                tile.id = `tile-${i}`;
-                tile.onclick = () => selectTile(i);
-
-                tile.innerHTML = `
-                    <div class="tile-icon">${species.icon}</div>
-                    <div class="tile-region">${species.region}</div>
-                    <div class="tile-name">${species.name}</div>
-                    <div class="tile-price">${status === 'free' ? species.price + ' €' : (owner === 'Vous' ? '👑' : '🔒')}</div>
-                `;
-                grid.appendChild(tile);
-            }
-        }
-
-        // Clic sur une parcelle de la map
-        function selectTile(index) {
-            selectedTileIndex = index - 1;
-            const tile = mapTilesData[selectedTileIndex];
-            const modal = document.getElementById('tree-modal');
-
-            document.getElementById('modal-title-text').innerText = `${tile.icon} Parcelle Mondiale #${tile.id} - ${tile.name}`;
-
-            let ownerStatus = tile.status === 'free' ? '🟢 Libre à l\'achat' : (tile.owner === 'Vous' ? '👑 Votre propriété (Canopée)' : `🔒 Propriété de ${tile.owner}`);
-
-            document.getElementById('modal-details-text').innerHTML = `
-                <span><strong>Région :</strong> ${tile.region}</span>
-                <span><strong>Rareté :</strong> <span style="color: #eab308;">${tile.rarity}</span></span>
-                <span><strong>Coordonnées GPS :</strong> ${tile.coords}</span>
-                <span><strong>Rendement de la Canopée :</strong> +${tile.income} pts/j</span>
-                <span><strong>Statut :</strong> ${ownerStatus}</span>
-                <span><strong>Prix :</strong> <strong style="color: #4ade80; font-size: 1rem;">${tile.price} €</strong></span>
-            `;
-
-            // Gérer l'affichage du bouton Stripe si l'arbre est déjà à vous
-            const stripeBtn = document.getElementById('modal-stripe-btn');
-            if (tile.status === 'owned-by-me') {
-                stripeBtn.style.display = 'none';
-            } else {
-                stripeBtn.style.display = 'block';
-            }
-
-            modal.classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('tree-modal').classList.remove('active');
-        }
-
-        // God Mode : S'attribuer la parcelle instantanément sans passer par Stripe
-        function godClaimSelectedTile() {
-            if (selectedTileIndex === null) return;
-            const tile = mapTilesData[selectedTileIndex];
-
-            tile.status = 'owned-by-me';
-            tile.owner = 'Vous';
-
-            // Mettre à jour la tuile sur la map en direct
-            const tileElement = document.getElementById(`tile-${tile.id}`);
-            tileElement.className = 'map-tile owned-by-me';
-            tileElement.querySelector('.tile-price').innerText = '👑';
-
-            // Mettre à jour les stats du tableau de bord
-            userTreesCount += 1;
-            totalIncome += tile.income;
-            userPoints += 200;
-
-            document.getElementById('user-trees').innerText = userTreesCount;
-            document.getElementById('tree-income').innerText = "+" + totalIncome + " pts/j";
-            document.getElementById('user-points').innerText = userPoints;
-
-            alert(`⚡ God Mode : Vous venez de capturer le ${tile.name} (${tile.region}) et d'élargir votre canopée !`);
-            closeModal();
-        }
-
-        // Synchronisation des liens Stripe clients
-        document.getElementById('admin-stripe-link').addEventListener('input', function() {
-            const newLink = this.value;
-            document.getElementById('modal-stripe-btn').href = newLink;
-        });
-
-        // Initialisation de la carte au démarrage
-        initWorldMap();
-    </script>
-</body>
-</html>
+  .brand h1 {
+    margin: 0;
+    font-size: 15px;
+    letter-spacing: .18em;
+   
