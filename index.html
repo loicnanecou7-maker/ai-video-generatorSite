@@ -1,89 +1,531 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CANOPY // Earth Asset Exchange</title>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CANOPY — Le marché mondial des arbres rares</title>
 <style>
-  :root {
-    --bg: #050b09;
-    --panel: rgba(7, 18, 14, .88);
-    --line: rgba(120, 255, 190, .16);
-    --line-strong: rgba(120, 255, 190, .45);
-    --text: #ecfff6;
-    --muted: #8fa69b;
-    --green: #38ff9c;
-    --cyan: #44e8ff;
-    --gold: #ffd166;
-    --danger: #ff5c77;
-    --purple: #b18cff;
+  :root{
+    --bg-void: #050807;
+    --bg-panel: #0a1210;
+    --bg-panel-2: #0e1a16;
+    --line: rgba(52, 211, 153, 0.12);
+    --line-strong: rgba(52, 211, 153, 0.28);
+    --emerald: #34d399;
+    --emerald-bright: #6ffcc0;
+    --neon: #b6ff5c;
+    --gold: #e8c766;
+    --owned: #34d399;
+    --other: #6b7a94;
+    --free: #223430;
+    --text-hi: #eafff4;
+    --text-mid: #9fb8ac;
+    --text-low: #5c7268;
+    --danger: #ff6b6b;
+    --font-display: 'Canopy Display', Georgia, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-mono: 'SF Mono', 'Consolas', monospace;
   }
 
-  * { box-sizing: border-box; }
-
-  html, body {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    overflow: hidden;
-    background: var(--bg);
-    color: var(--text);
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  *{ box-sizing: border-box; margin:0; padding:0; }
+  html,body{
+    height:100%; overflow:hidden;
+    background: var(--bg-void);
+    color: var(--text-hi);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
   }
 
-  #app, #map {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-  }
+  #app{ position:relative; width:100vw; height:100vh; }
 
-  #map {
+  /* ---------- CANVAS MAP ---------- */
+  #mapCanvas{
+    position:absolute; inset:0;
+    display:block;
     cursor: grab;
-    touch-action: none;
     background:
-      radial-gradient(circle at 50% 45%, #0b2d22 0%, #07150f 42%, #030605 100%);
+      radial-gradient(ellipse at 30% 20%, rgba(52,211,153,0.06), transparent 55%),
+      radial-gradient(ellipse at 75% 80%, rgba(182,255,92,0.04), transparent 50%),
+      var(--bg-void);
+  }
+  #mapCanvas.dragging{ cursor: grabbing; }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    position:absolute; top:0; left:0; right:0;
+    height:64px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 0 22px;
+    background: linear-gradient(180deg, rgba(5,8,7,0.92), rgba(5,8,7,0.0));
+    pointer-events:none;
+    z-index: 20;
+  }
+  .brand{
+    display:flex; align-items:center; gap:10px;
+    pointer-events:auto;
+  }
+  .brand-mark{
+    width:30px; height:30px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px;
+    filter: drop-shadow(0 0 8px rgba(52,211,153,0.7));
+  }
+  .brand-name{
+    font-family: var(--font-display);
+    font-size: 19px;
+    letter-spacing: 0.14em;
+    font-weight: 600;
+    color: var(--text-hi);
+  }
+  .brand-name em{
+    font-style:normal;
+    color: var(--emerald-bright);
+  }
+  .region-readout{
+    pointer-events:auto;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--text-low);
+    text-transform: uppercase;
+    display:flex; gap:16px;
+  }
+  .region-readout b{ color: var(--emerald); font-weight:600; }
+
+  /* ---------- SIDEBAR (stats) ---------- */
+  .sidebar{
+    position:absolute; top:0; left:0; bottom:0;
+    width: 268px;
+    padding: 84px 20px 20px;
+    background: linear-gradient(180deg, rgba(10,18,16,0.94), rgba(10,18,16,0.86));
+    border-right: 1px solid var(--line);
+    backdrop-filter: blur(14px);
+    z-index: 15;
+    display:flex; flex-direction:column; gap:22px;
+    overflow-y:auto;
+  }
+  .stat-block-title{
+    font-size:10px; letter-spacing:0.16em; text-transform:uppercase;
+    color: var(--text-low); font-weight:600; margin-bottom:10px;
+  }
+  .stat-grid{ display:flex; flex-direction:column; gap:12px; }
+  .stat-card{
+    border:1px solid var(--line); border-radius:10px;
+    padding: 12px 14px;
+    background: rgba(52,211,153,0.03);
+    position:relative; overflow:hidden;
+  }
+  .stat-card::before{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:2px;
+    background: var(--emerald); opacity:0.6;
+  }
+  .stat-label{ font-size:10px; color:var(--text-low); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px;}
+  .stat-value{ font-family: var(--font-mono); font-size:20px; font-weight:600; color:var(--text-hi); }
+  .stat-value.accent{ color: var(--emerald-bright); }
+  .stat-value.gold{ color: var(--gold); }
+  .stat-delta{ font-size:10.5px; color:var(--emerald); margin-top:3px; font-family:var(--font-mono); }
+
+  .legend{ display:flex; flex-direction:column; gap:8px; }
+  .legend-row{ display:flex; align-items:center; gap:9px; font-size:12px; color:var(--text-mid); }
+  .legend-swatch{ width:11px; height:11px; border-radius:3px; flex-shrink:0; }
+
+  .search-box{
+    position:relative;
+  }
+  .search-box input{
+    width:100%; background: rgba(0,0,0,0.3); border:1px solid var(--line);
+    border-radius:8px; padding:9px 12px; color:var(--text-hi); font-size:12.5px;
+    font-family: var(--font-body); outline:none;
+  }
+  .search-box input:focus{ border-color: var(--line-strong); }
+  .search-box input::placeholder{ color: var(--text-low); }
+
+  .region-list{ display:flex; flex-direction:column; gap:2px; }
+  .region-item{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:8px 10px; border-radius:7px; cursor:pointer;
+    font-size:12px; color:var(--text-mid);
+    transition: background 0.15s;
+  }
+  .region-item:hover{ background: rgba(52,211,153,0.08); color:var(--text-hi); }
+  .region-item .count{ font-family:var(--font-mono); color:var(--text-low); font-size:11px; }
+
+  .footer-hint{
+    margin-top:auto; font-size:10.5px; color: var(--text-low); line-height:1.6;
+    padding-top:14px; border-top:1px solid var(--line);
+  }
+  .footer-hint kbd{
+    background: rgba(255,255,255,0.06); border:1px solid var(--line);
+    border-radius:4px; padding:1px 5px; font-family:var(--font-mono); font-size:10px;
   }
 
-  #map.dragging { cursor: grabbing; }
+  /* ---------- GOD MODE TOGGLE (discret, bas gauche) ---------- */
+  .godmode-toggle{
+    position:absolute; left:20px; bottom:20px;
+    z-index: 25;
+    display:flex; align-items:center; gap:9px;
+    padding: 9px 12px 9px 10px;
+    border-radius: 10px;
+    border:1px solid var(--line);
+    background: rgba(10,18,16,0.9);
+    backdrop-filter: blur(10px);
+    cursor:pointer;
+    user-select:none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .godmode-toggle:hover{ border-color: var(--line-strong); }
+  .godmode-toggle.active{
+    border-color: rgba(182,255,92,0.5);
+    box-shadow: 0 0 22px rgba(182,255,92,0.15);
+  }
+  .gm-dot{
+    width:8px; height:8px; border-radius:50%;
+    background: var(--text-low);
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .godmode-toggle.active .gm-dot{
+    background: var(--neon);
+    box-shadow: 0 0 8px var(--neon);
+  }
+  .gm-label{ font-size:11px; letter-spacing:0.06em; color:var(--text-mid); font-family: var(--font-mono);}
+  .godmode-toggle.active .gm-label{ color: var(--neon); }
 
-  .topbar {
-    position: fixed;
-    z-index: 10;
-    top: 20px;
-    left: 24px;
-    right: 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    pointer-events: none;
+  /* ---------- DETAIL PANEL (overlay droite) ---------- */
+  .detail-panel{
+    position:absolute; top:0; right:0; bottom:0;
+    width: 380px;
+    background: linear-gradient(180deg, rgba(10,18,16,0.97), rgba(8,14,12,0.98));
+    border-left: 1px solid var(--line);
+    backdrop-filter: blur(16px);
+    z-index: 30;
+    transform: translateX(100%);
+    transition: transform 0.32s cubic-bezier(.19,1,.22,1);
+    overflow-y:auto;
+    padding-bottom: 30px;
+  }
+  .detail-panel.open{ transform: translateX(0); }
+
+  .detail-hero{
+    position:relative;
+    height: 210px;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(ellipse at center, rgba(52,211,153,0.16), transparent 70%);
+    border-bottom: 1px solid var(--line);
+    overflow:hidden;
+  }
+  .detail-hero .rarity-band{
+    position:absolute; top:0; left:0; right:0; height:3px;
+  }
+  .detail-hero-icon{
+    font-size: 88px;
+    filter: drop-shadow(0 0 30px rgba(52,211,153,0.5));
+    animation: float 4.5s ease-in-out infinite;
+  }
+  @keyframes float{
+    0%,100%{ transform: translateY(0); }
+    50%{ transform: translateY(-8px); }
+  }
+  .detail-close{
+    position:absolute; top:14px; right:14px;
+    width:30px; height:30px; border-radius:50%;
+    background: rgba(0,0,0,0.35); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--text-mid); font-size:15px;
+    transition: all 0.15s;
+  }
+  .detail-close:hover{ color:var(--text-hi); border-color:var(--line-strong); }
+
+  .detail-body{ padding: 20px 22px; }
+  .detail-tag{
+    display:inline-block; font-size:10px; letter-spacing:0.1em; text-transform:uppercase;
+    padding:3px 9px; border-radius:20px; font-weight:600; margin-bottom:10px;
+  }
+  .detail-title{
+    font-family: var(--font-display);
+    font-size: 23px; font-weight:600; color:var(--text-hi);
+    margin-bottom:4px; line-height:1.2;
+  }
+  .detail-region{ font-size:12px; color:var(--text-low); margin-bottom:18px; }
+
+  .detail-owner-row{
+    display:flex; align-items:center; gap:9px;
+    padding: 10px 12px; border-radius:9px;
+    background: rgba(255,255,255,0.02); border:1px solid var(--line);
+    margin-bottom:18px; font-size:12.5px;
+  }
+  .owner-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+
+  .detail-stats-grid{
+    display:grid; grid-template-columns: 1fr 1fr; gap:10px;
+    margin-bottom:18px;
+  }
+  .dstat{
+    border:1px solid var(--line); border-radius:9px; padding:11px 12px;
+    background: rgba(52,211,153,0.025);
+  }
+  .dstat-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-low); margin-bottom:5px;}
+  .dstat-value{ font-family:var(--font-mono); font-size:15px; color:var(--text-hi); font-weight:600; }
+  .dstat-value.mono-small{ font-size:12.5px; }
+
+  .detail-desc{
+    font-size:12.5px; line-height:1.7; color:var(--text-mid);
+    margin-bottom: 20px;
+    padding-bottom:20px;
+    border-bottom: 1px solid var(--line);
   }
 
-  .brand, .top-actions {
-    pointer-events: auto;
+  .buy-btn{
+    width:100%; padding:14px; border-radius:10px; border:none;
+    font-family: var(--font-mono); font-size:13px; font-weight:700; letter-spacing:0.04em;
+    cursor:pointer; margin-bottom: 22px;
+    transition: transform 0.12s, box-shadow 0.2s;
+    text-transform: uppercase;
+  }
+  .buy-btn:active{ transform: scale(0.98); }
+  .buy-btn.claim{
+    background: linear-gradient(135deg, var(--neon), var(--emerald));
+    color: #06120b;
+    box-shadow: 0 0 26px rgba(182,255,92,0.25);
+  }
+  .buy-btn.claim:hover{ box-shadow: 0 0 34px rgba(182,255,92,0.4); }
+  .buy-btn.locked{
+    background: rgba(255,255,255,0.04); color: var(--text-low);
+    border: 1px solid var(--line); cursor:not-allowed;
+  }
+  .buy-btn.mine{
+    background: rgba(52,211,153,0.1); color: var(--emerald-bright);
+    border: 1px solid var(--line-strong); cursor:default;
   }
 
-  .brand {
-    display: flex;
-    gap: 14px;
-    align-items: center;
+  .neighbors-title{
+    font-size:10px; text-transform:uppercase; letter-spacing:0.12em;
+    color:var(--text-low); margin-bottom:12px; font-weight:600;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .neighbors-grid{
+    display:grid; grid-template-columns: repeat(3, 1fr); gap:9px;
+  }
+  .neighbor-cell{
+    aspect-ratio: 1; border-radius:9px; border:1px solid var(--line);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:4px; cursor:pointer; transition: all 0.15s; position:relative;
+    background: rgba(255,255,255,0.015);
+  }
+  .neighbor-cell:hover{ border-color: var(--line-strong); background: rgba(52,211,153,0.06); transform: translateY(-2px); }
+  .neighbor-cell .n-icon{ font-size:20px; }
+  .neighbor-cell .n-status{
+    position:absolute; top:5px; right:5px; width:6px; height:6px; border-radius:50%;
+  }
+  .neighbor-cell .n-price{ font-size:9px; font-family:var(--font-mono); color:var(--text-low); }
+  .neighbor-empty{
+    grid-column: 1 / -1; text-align:center; color:var(--text-low); font-size:11px; padding:14px;
   }
 
-  .logo {
-    width: 42px;
-    height: 42px;
-    border: 1px solid var(--green);
-    display: grid;
-    place-items: center;
-    border-radius: 12px;
-    background: rgba(20,255,140,.08);
-    box-shadow: 0 0 28px rgba(56,255,156,.18);
-    font-size: 20px;
+  /* ---------- TOAST ---------- */
+  .toast-wrap{
+    position:absolute; top:78px; left:50%; transform: translateX(-50%);
+    z-index: 60; display:flex; flex-direction:column; gap:8px; align-items:center;
+    pointer-events:none;
+  }
+  .toast{
+    background: rgba(10,18,16,0.95); border:1px solid var(--line-strong);
+    padding: 10px 18px; border-radius: 30px; font-size:12.5px;
+    display:flex; align-items:center; gap:8px; color:var(--text-hi);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    animation: toastIn 0.28s cubic-bezier(.19,1,.22,1), toastOut 0.3s ease 2.2s forwards;
+    font-family: var(--font-mono);
+  }
+  @keyframes toastIn{ from{ opacity:0; transform: translateY(-10px);} to{opacity:1; transform:translateY(0);} }
+  @keyframes toastOut{ to{ opacity:0; transform: translateY(-8px); } }
+
+  /* ---------- ZOOM CONTROLS ---------- */
+  .zoom-controls{
+    position:absolute; right:20px; bottom:20px; z-index:25;
+    display:flex; flex-direction:column; gap:2px;
+    border:1px solid var(--line); border-radius:10px; overflow:hidden;
+    background: rgba(10,18,16,0.9); backdrop-filter: blur(10px);
+  }
+  .zoom-btn{
+    width:38px; height:38px; display:flex; align-items:center; justify-content:center;
+    color: var(--text-mid); font-size:17px; cursor:pointer; background:transparent; border:none;
+    transition: background 0.15s, color 0.15s;
+  }
+  .zoom-btn:hover{ background: rgba(52,211,153,0.1); color: var(--emerald-bright); }
+  .zoom-btn + .zoom-btn{ border-top: 1px solid var(--line); }
+
+  .minimap-scale{
+    position:absolute; right:20px; bottom:78px; z-index:25;
+    font-family: var(--font-mono); font-size:10px; color: var(--text-low);
+    background: rgba(10,18,16,0.75); padding:5px 10px; border-radius:6px;
+    border:1px solid var(--line);
   }
 
-  .brand h1 {
-    margin: 0;
-    font-size: 15px;
-    letter-spacing: .18em;
-   
+  ::-webkit-scrollbar{ width:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background: var(--line-strong); border-radius:3px; }
+
+  @media (max-width: 860px){
+    .sidebar{ width: 210px; padding: 78px 14px 14px; }
+    .detail-panel{ width: 100%; }
+    .region-readout{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="mapCanvas"></canvas>
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">🌲</div>
+      <div class="brand-name">CANO<em>PY</em></div>
+    </div>
+    <div class="region-readout" id="regionReadout">
+      <span>LAT <b id="roLat">—</b></span>
+      <span>LNG <b id="roLng">—</b></span>
+      <span>ZOOM <b id="roZoom">1.0×</b></span>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <div>
+      <div class="stat-block-title">Ma canopée</div>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Arbres possédés</div>
+          <div class="stat-value accent" id="statTrees">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Valeur totale</div>
+          <div class="stat-value gold" id="statValue">$0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Rendement / jour</div>
+          <div class="stat-value" id="statYield">$0.00</div>
+          <div class="stat-delta" id="statYieldPts">+0 pts éco</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Points éco cumulés</div>
+          <div class="stat-value accent" id="statPoints">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="stat-block-title">Légende</div>
+      <div class="legend">
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--owned)"></span> Vos parcelles</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--other)"></span> Autres explorateurs</div>
+        <div class="legend-row"><span class="legend-swatch" style="background:var(--free); border:1px solid var(--line-strong)"></span> Parcelles libres</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="stat-block-title">Régions</div>
+      <div class="region-list" id="regionList"></div>
+    </div>
+
+    <div class="footer-hint">
+      <kbd>Glisser</kbd> pour naviguer · <kbd>Molette</kbd> pour zoomer<br>
+      Cliquez une parcelle pour l'inspecter.
+    </div>
+  </aside>
+
+  <div class="godmode-toggle" id="godToggle">
+    <div class="gm-dot"></div>
+    <div class="gm-label">GOD MODE</div>
+  </div>
+
+  <div class="zoom-controls">
+    <button class="zoom-btn" id="zoomIn">+</button>
+    <button class="zoom-btn" id="zoomOut">−</button>
+  </div>
+  <div class="minimap-scale" id="scaleReadout">1 parcelle ≈ 0.5 ha</div>
+
+  <div class="detail-panel" id="detailPanel"></div>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   1. DONNÉES — ESPÈCES, RARETÉS, RÉGIONS
+   ============================================================ */
+
+const RARITIES = {
+  common:    { label: "Commun",      color: "#6b8f7c", mult: 1,    glow: false },
+  uncommon:  { label: "Peu commun",  color: "#34d399", mult: 2.4,  glow: false },
+  rare:      { label: "Rare",        color: "#22c1e8", mult: 5.5,  glow: true  },
+  epic:      { label: "Épique",      color: "#c084fc", mult: 12,   glow: true  },
+  legendary: { label: "Légendaire",  color: "#e8c766", mult: 28,   glow: true  },
+};
+const RARITY_KEYS = Object.keys(RARITIES);
+const RARITY_WEIGHTS = [46, 30, 15, 7, 2]; // % approx pour commun->légendaire
+
+const REGIONS = [
+  { key:"amazonia", name:"Amazonie",        latBase:-3,  lngBase:-62, color:"#0f2e1c",
+    species:[
+      {name:"Acajou d'Amazonie", icon:"🌳", rarity:"rare"},
+      {name:"Kapokier Géant",    icon:"🌴", rarity:"epic"},
+      {name:"Palissandre du Pará", icon:"🌲", rarity:"uncommon"},
+      {name:"Hévéa Sauvage",     icon:"🌿", rarity:"common"},
+    ]},
+  { key:"africa", name:"Afrique de l'Ouest", latBase:9,   lngBase:1,   color:"#2e2410",
+    species:[
+      {name:"Baobab Ancestral",  icon:"🌳", rarity:"legendary"},
+      {name:"Iroko Sacré",       icon:"🌲", rarity:"epic"},
+      {name:"Acacia du Sahel",   icon:"🌵", rarity:"common"},
+      {name:"Palmier Rônier",    icon:"🌴", rarity:"uncommon"},
+    ]},
+  { key:"asia", name:"Asie du Sud-Est",      latBase:13,  lngBase:101, color:"#132e1e",
+    species:[
+      {name:"Banyan Sacré",      icon:"🌳", rarity:"epic"},
+      {name:"Teck de Birmanie",  icon:"🌲", rarity:"rare"},
+      {name:"Bambou Géant",      icon:"🎋", rarity:"common"},
+      {name:"Bois de Fer",       icon:"🌴", rarity:"uncommon"},
+    ]},
+  { key:"japan", name:"Japon",                latBase:36,  lngBase:138, color:"#2e1626",
+    species:[
+      {name:"Cerisier Sakura",   icon:"🌸", rarity:"rare"},
+      {name:"Érable Momiji",     icon:"🍁", rarity:"uncommon"},
+      {name:"Pin Noir du Japon", icon:"🌲", rarity:"common"},
+      {name:"Ginkgo Millénaire", icon:"🍃", rarity:"legendary"},
+    ]},
+  { key:"siberia", name:"Sibérie",            latBase:60,  lngBase:100, color:"#101f2e",
+    species:[
+      {name:"Mélèze de Sibérie", icon:"🌲", rarity:"common"},
+      {name:"Pin Sibérien",      icon:"🌲", rarity:"uncommon"},
+      {name:"Bouleau Blanc",     icon:"🌳", rarity:"common"},
+      {name:"Cèdre de Sibérie",  icon:"🌲", rarity:"rare"},
+    ]},
+  { key:"namerica", name:"Amérique du Nord",  latBase:41,  lngBase:-115, color:"#182e10",
+    species:[
+      {name:"Séquoia Géant",     icon:"🌲", rarity:"legendary"},
+      {name:"Pin Bristlecone",   icon:"🌲", rarity:"epic"},
+      {name:"Chêne Rouge",       icon:"🌳", rarity:"uncommon"},
+      {name:"Érable à Sucre",    icon:"🍁", rarity:"common"},
+    ]},
+  { key:"europe", name:"Europe",              latBase:47,  lngBase:12,  color:"#1c2e14",
+    species:[
+      {name:"Chêne Millénaire",  icon:"🌳", rarity:"epic"},
+      {name:"If Sacré",          icon:"🌲", rarity:"rare"},
+      {name:"Hêtre des Carpates",icon:"🌳", rarity:"uncommon"},
+      {name:"Peuplier d'Italie", icon:"🌴", rarity:"common"},
+    ]},
+  { key:"oceania", name:"Océanie",            latBase:-25, lngBase:133, color:"#122e28",
+    species:[
+      {name:"Eucalyptus Roi",    icon:"🌳", rarity:"rare"},
+      {name:"Kauri Millénaire",  icon:"🌲", rarity:"legendary"},
+      {name:"Banksia Côtière",   icon:"🌿", rarity:"common"},
+      {name:"Araucaria Ancien",  icon:"🌲", rarity:"epic"},
+    ]},
+];
+
+const OWNER_NAMES = ["EcoVentures_Fund","GreenRoot_88","TerraNova.eth","CanopyBaron","Silvicole_Prime",
+  "RainforestDAO","VerdantCapital","OakAndOre","BioReserve_Zed","Arborly_Invest"];
+
+/* =================
